@@ -1,0 +1,6 @@
+name = "bike-frontend"
+compatibility_date = "2025-12-01"
+
+[site]
+# Serve static assets from this folder when running wrangler in the frontend directory.
+bucket = "."
