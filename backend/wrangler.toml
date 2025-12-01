@@ -1,0 +1,17 @@
+name = "bike-api"
+main = "worker.js"
+compatibility_date = "2025-12-01"
+
+kv_namespaces = [
+  { binding = "BIKE_STATUS", id = "YOUR_KV_NAMESPACE_ID" }
+]
+
+[vars]
+# DynamoDB region and table can be stored as plain vars.
+AWS_REGION = "eu-central-1"
+DYNAMODB_TABLE = "your-dynamodb-table"
+
+# Secrets that must be set via `wrangler secret put`:
+# AWS_ACCESS_KEY
+# AWS_SECRET_KEY
+# ADMIN_PIN
