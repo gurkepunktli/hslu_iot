@@ -262,6 +262,7 @@ function parseItem(item) {
             lon: parseFloat(payload?.lon?.N || payload?.lon || 0),
             speed: parseFloat(payload?.speed_kn?.N || payload?.speed_kn || 0),
             course: parseFloat(payload?.course_deg?.N || payload?.course_deg || 0),
+            fix: payload?.fix?.BOOL ?? payload?.fix,
             ts: item.ts?.S || item.ts?.N || item.ts,
             device: item.device?.S || item.device
         };
@@ -272,7 +273,11 @@ function parseItem(item) {
 }
 
 function isValidPosition(pos) {
-    return pos && typeof pos.lat === 'number' && typeof pos.lon === 'number' && (pos.lat !== 0 || pos.lon !== 0);
+    const hasFix = pos?.fix !== false; // reject explicit false; allow true/undefined
+    const latOk = Number.isFinite(pos?.lat);
+    const lonOk = Number.isFinite(pos?.lon);
+    const notZero = pos?.lat !== 0 || pos?.lon !== 0;
+    return hasFix && latOk && lonOk && notZero;
 }
 
 function findLatestValidPosition(items) {
