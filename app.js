@@ -194,12 +194,12 @@ function setOfflineStatus() {
     text.textContent = 'Keine Verbindung';
 }
 
-// Kein GPS Fix
+// Fehler: Kein GPS-Fix vorhanden
 function setNoFixStatus() {
     const dot = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     dot.className = 'status-dot nofix';
-    text.textContent = 'Kein GPS Fix';
+    text.textContent = 'Fehler: Kein GPS-Fix vorhanden';
 }
 
 
