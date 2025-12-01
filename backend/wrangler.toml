@@ -4,13 +4,13 @@ compatibility_date = "2025-12-01"
 
 # KV namespace binding (replace with your namespace ID)
 kv_namespaces = [
-  { binding = "BIKE_STATUS", id = "REPLACE_WITH_KV_NAMESPACE_ID" }
+  { binding = "BIKE_STATUS", id = "BIKE_STATUS" }
 ]
 
 [vars]
 # Non-secret vars
 AWS_REGION = "eu-central-1"
-DYNAMODB_TABLE = "REPLACE_WITH_DYNAMODB_TABLE"
+DYNAMODB_TABLE = "gpshistory"
 
 # Secrets to set via `wrangler secret put`:
 # AWS_ACCESS_KEY
