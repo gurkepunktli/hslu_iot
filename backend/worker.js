@@ -43,6 +43,7 @@ export default {
     async fetch(request, env) {
         const url = new URL(request.url);
         const config = buildConfig(env);
+        const MAX_SCAN = 50; // number of recent records to scan for a valid fix
         
         // CORS Headers
         const corsHeaders = {
@@ -61,14 +62,13 @@ export default {
             // Route: GET /api/position - Aktuelle Position
             if (url.pathname === '/api/position' && request.method === 'GET') {
                 const device = url.searchParams.get('device') || 'pi9';
-                const data = await queryDynamoDB(config, device, 1);
+                const data = await queryDynamoDB(config, device, MAX_SCAN);
                 
                 if (!data.Items || data.Items.length === 0) {
                     return new Response('{}', { headers: corsHeaders });
                 }
 
-                const item = data.Items[0];
-                const position = parseItem(item);
+                const position = findLatestValidPosition(data.Items);
                 
                 return new Response(JSON.stringify(position), { headers: corsHeaders });
             }
@@ -84,7 +84,9 @@ export default {
                     return new Response('[]', { headers: corsHeaders });
                 }
 
-                const points = data.Items.map(parseItem);
+                const points = data.Items
+                    .map(parseItem)
+                    .filter(isValidPosition);
                 return new Response(JSON.stringify(points), { headers: corsHeaders });
             }
 
@@ -267,4 +269,20 @@ function parseItem(item) {
         console.error('Parse error:', e, item);
         return {};
     }
+}
+
+function isValidPosition(pos) {
+    return pos && typeof pos.lat === 'number' && typeof pos.lon === 'number' && (pos.lat !== 0 || pos.lon !== 0);
+}
+
+function findLatestValidPosition(items) {
+    if (!Array.isArray(items) || items.length === 0) return {};
+    for (const item of items) {
+        const parsed = parseItem(item);
+        if (isValidPosition(parsed)) {
+            return parsed;
+        }
+    }
+    // Fallback: gib den ersten Eintrag zurück, auch wenn er 0/0 ist
+    return parseItem(items[0]);
 }
