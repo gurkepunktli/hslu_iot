@@ -43,7 +43,7 @@ export default {
     async fetch(request, env) {
         const url = new URL(request.url);
         const config = buildConfig(env);
-        const MAX_SCAN = 50; // number of recent records to scan for a valid fix
+        const MAX_SCAN = 500; // number of recent records to scan for a valid fix
         
         // CORS Headers
         const corsHeaders = {
