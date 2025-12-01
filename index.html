@@ -207,6 +207,52 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        .info-panel {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: white;
+            padding: 14px 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 220px;
+        }
+
+        .info-logo {
+            height: 36px;
+            width: auto;
+        }
+
+        .info-text { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 4px; 
+        }
+
+        .info-title {
+            font-weight: 700;
+            font-size: 14px;
+            color: #111827;
+        }
+
+        .info-module {
+            font-size: 13px;
+            color: #4b5563;
+        }
+
+        @media (max-width: 480px) {
+            .info-panel {
+                bottom: auto;
+                top: 15px;
+                right: 15px;
+                left: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -258,9 +304,22 @@
         </button>
     </div>
 
+    <div class="info-panel">
+        <img
+            src="https://www.hslu.ch/-/media/campus/common/logos/hslu/hslu_logo_de_rgb.svg"
+            alt="HSLU.ch Logo"
+            class="info-logo"
+        />
+        <div class="info-text">
+            <div class="info-title">HSLU.ch</div>
+            <div class="info-module">Modul: I.BA_IOT.H2501</div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
+
 
