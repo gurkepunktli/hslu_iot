@@ -255,14 +255,14 @@ async function sha256(message) {
 // DynamoDB Item parsen
 function parseItem(item) {
     try {
-        const payload = item.payload?.M || item.payload;
+        const payload = item.payload?.M || item.payload || item;
         
         return {
-            lat: parseFloat(payload?.lat?.N || payload?.lat || 0),
-            lon: parseFloat(payload?.lon?.N || payload?.lon || 0),
-            speed: parseFloat(payload?.speed_kn?.N || payload?.speed_kn || 0),
-            course: parseFloat(payload?.course_deg?.N || payload?.course_deg || 0),
-            fix: payload?.fix?.BOOL ?? payload?.fix,
+            lat: parseFloat(payload?.lat?.N ?? payload?.lat ?? item.lat?.N ?? item.lat ?? 0),
+            lon: parseFloat(payload?.lon?.N ?? payload?.lon ?? item.lon?.N ?? item.lon ?? 0),
+            speed: parseFloat(payload?.speed_kn?.N ?? payload?.speed_kn ?? item.speed_kn?.N ?? item.speed_kn ?? 0),
+            course: parseFloat(payload?.course_deg?.N ?? payload?.course_deg ?? item.course_deg?.N ?? item.course_deg ?? 0),
+            fix: payload?.fix?.BOOL ?? payload?.fix ?? item.fix?.BOOL ?? item.fix,
             ts: item.ts?.S || item.ts?.N || item.ts,
             device: item.device?.S || item.device
         };
@@ -288,6 +288,6 @@ function findLatestValidPosition(items) {
             return parsed;
         }
     }
-    // Fallback: gib den ersten Eintrag zurück, auch wenn er 0/0 ist
-    return parseItem(items[0]);
+    // Fallback: kein gültiger Fix gefunden
+    return {};
 }
