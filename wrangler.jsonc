@@ -1,7 +1,5 @@
 {
-  "name": "bike-frontend",
+  "name": "hslu-iot-bike",
   "compatibility_date": "2025-12-01",
-  "assets": {
-    "directory": "."
-  }
+  "pages_build_output_dir": "frontend"
 }
