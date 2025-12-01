@@ -5,8 +5,6 @@
 let map, marker, trackLine;
 let isStolen = false;
 let lastPosition = null;
-let appStarted = false;
-let updateIntervalId = null;
 const trackPoints = [];
 
 // Karte initialisieren
@@ -344,56 +342,21 @@ async function loadHistory() {
 }
 
 // App starten
-function startApp() {
-    if (appStarted) return;
-    appStarted = true;
-
-    const appContent = document.getElementById('appContent');
-    const loginOverlay = document.getElementById('loginOverlay');
-    if (appContent) {
-        appContent.classList.remove('hidden');
-    }
-    if (loginOverlay) {
-        loginOverlay.classList.add('hidden');
-    }
-
+document.addEventListener('DOMContentLoaded', () => {
     initMap();
     loadHistory();
     updatePosition();
-    updateIntervalId = setInterval(updatePosition, CONFIG.UPDATE_INTERVAL);
-}
-
-// Login-Handling
-document.addEventListener('DOMContentLoaded', () => {
-    const loginBtn = document.getElementById('loginButton');
-    const loginUser = document.getElementById('loginUser');
-    const loginPass = document.getElementById('loginPass');
-    const loginError = document.getElementById('loginError');
-
-    function handleLogin() {
-        const userOk = loginUser && loginUser.value.trim() === 'hslu';
-        const passOk = loginPass && loginPass.value === 'hslu';
-
-        if (userOk && passOk) {
-            if (loginError) loginError.textContent = '';
-            startApp();
-        } else if (loginError) {
-            loginError.textContent = 'Invalid credentials';
-        }
-    }
-
-    if (loginBtn) {
-        loginBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            handleLogin();
-        });
-    }
-
-    if (loginPass) {
-        loginPass.addEventListener('keyup', (e) => {
-            if (e.key === 'Enter') {
-                handleLogin();
-            }
-        });
-    }
+    
+    // Regelmässige Updates
+    setInterval(updatePosition, CONFIG.UPDATE_INTERVAL);
 });
+
+
+
+
+
+
+
+
+
+
