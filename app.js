@@ -30,8 +30,8 @@ function initMap() {
 
     L.control.layers(
         {
-            'Karte': osm,
-            'Satellit': satellite
+            'Map': osm,
+            'Satellite': satellite
         },
         null,
         { position: 'topleft' }
@@ -42,7 +42,7 @@ function initMap() {
 function createBikeIcon(stolen = false) {
     return L.divIcon({
         className: 'bike-marker',
-        html: `<div class="bike-icon ${stolen ? 'stolen' : ''}">🚲</div>`,
+        html: `<div class="bike-icon ${stolen ? 'stolen' : ''}">&#128690;</div>`,
         iconSize: [32, 32],
         iconAnchor: [16, 16]
     });
@@ -124,7 +124,7 @@ async function updatePosition() {
                 updateStolenUI(isStolen);
             }
         } catch (e) {
-            console.warn('Status laden fehlgeschlagen:', e);
+            console.warn('Failed to load status:', e);
             updateStolenUI(isStolen);
         }
 
@@ -151,7 +151,7 @@ async function updatePosition() {
         }
 
     } catch (err) {
-        console.error('Update fehlgeschlagen:', err);
+        console.error('Update failed:', err);
         setOfflineStatus();
         document.getElementById('loading').classList.add('hidden');
     }
@@ -163,7 +163,7 @@ function updateUI(data) {
     const speedKmh = (data.speed * 1.852).toFixed(1);
     
     document.getElementById('speed').textContent = `${speedKmh} km/h`;
-    document.getElementById('course').textContent = `${data.course?.toFixed(0) || 0}°`;
+                        document.getElementById('course').textContent = (data.course?.toFixed(0) || 0) + '\u00B0';
     document.getElementById('coords').textContent = `${data.lat.toFixed(5)}, ${data.lon.toFixed(5)}`;
     
     // Zeitstempel formatieren
@@ -183,7 +183,7 @@ function setOnlineStatus() {
     if (isStolen) {
         dot.classList.add('stolen');
     }
-    text.textContent = isStolen ? 'GESTOHLEN' : 'Online';
+    text.textContent = isStolen ? 'STOLEN' : 'Online';
 }
 
 // Offline-Status setzen
@@ -191,15 +191,15 @@ function setOfflineStatus() {
     const dot = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     dot.className = 'status-dot offline';
-    text.textContent = 'Keine Verbindung';
+    text.textContent = 'No connection';
 }
 
-// Fehler: Kein GPS-Fix vorhanden
+// Error: No GPS fix available
 function setNoFixStatus() {
     const dot = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     dot.className = 'status-dot nofix';
-    text.textContent = 'Fehler: Kein GPS-Fix vorhanden';
+    text.textContent = 'Error: No GPS fix available';
 }
 
 
@@ -215,26 +215,26 @@ function updateStolenUI(stolen) {
     if (stolen) {
         banner.classList.add('active');
         dot.classList.add('stolen');
-        text.textContent = 'GESTOHLEN';
+        text.textContent = 'STOLEN';
         btn.className = 'btn-stolen clear';
-        btn.textContent = '🚲 Fahrrad entsperren';
+        btn.textContent = 'Unlock bike';
     } else {
         banner.classList.remove('active');
         dot.classList.remove('stolen');
         text.textContent = 'Online';
         btn.className = 'btn-stolen report';
-        btn.textContent = '🚨 Als gestohlen melden';
+        btn.textContent = 'Report as stolen';
     }
 }
 
 // Diebstahl melden / Entwarnung
 async function toggleStolen() {
-    const pin = prompt('Sicherheits-PIN eingeben:');
+    const pin = prompt('Enter security PIN:');
     if (!pin) return;
     
     const btn = document.getElementById('btnStolen');
     btn.disabled = true;
-    btn.textContent = 'Wird gespeichert...';
+    btn.textContent = 'Saving...';
     
     try {
         const res = await fetch(`${CONFIG.API_URL}/api/stolen`, {
@@ -250,7 +250,7 @@ async function toggleStolen() {
         const data = await res.json();
         
         if (data.error) {
-            alert('Fehler: ' + data.error);
+            alert('Error: ' + data.error);
             updateStolenUI(isStolen); // Reset button
             return;
         }
@@ -263,8 +263,8 @@ async function toggleStolen() {
         }
         
     } catch (err) {
-        console.error('Fehler:', err);
-        alert('Verbindungsfehler. Bitte erneut versuchen.');
+        console.error('Error:', err);
+        alert('Connection error. Please try again.');
         updateStolenUI(isStolen); // Reset button
     }
     
@@ -337,7 +337,7 @@ async function loadHistory() {
             }
         }
     } catch (err) {
-        console.error('Historie laden fehlgeschlagen:', err);
+        console.error('Failed to load history:', err);
     }
 }
 
@@ -350,3 +350,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Regelmässige Updates
     setInterval(updatePosition, CONFIG.UPDATE_INTERVAL);
 });
+
+
+
+
+
+
+
+
+
+

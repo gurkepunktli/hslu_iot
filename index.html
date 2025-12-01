@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚲 Fahrrad Tracker</title>
+    <title>Bike Tracker</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -255,49 +255,49 @@
 <body>
     <div class="loading" id="loading">
         <div class="spinner"></div>
-        <div>Lade Position...</div>
+        <div>Loading position...</div>
     </div>
 
     <div class="stolen-banner" id="stolenBanner">
-        ⚠️ FAHRRAD ALS GESTOHLEN GEMELDET ⚠️
+        BIKE REPORTED AS STOLEN
     </div>
     
     <div id="map"></div>
     
     <div class="panel">
-        <h2>🚲 Bike Tracker</h2>
+        <h2>Bike Tracker</h2>
         
         <div class="status">
             <div class="status-dot" id="statusDot"></div>
-            <span id="statusText">Verbinde...</span>
+            <span id="statusText">Connecting...</span>
         </div>
         
         <div class="info-row">
-            <span class="info-label">Geschwindigkeit</span>
+            <span class="info-label">Speed</span>
             <span class="info-value" id="speed">-- km/h</span>
         </div>
         
         <div class="info-row">
-            <span class="info-label">Kurs</span>
-            <span class="info-value" id="course">--°</span>
+            <span class="info-label">Course</span>
+            <span class="info-value" id="course">--&deg;</span>
         </div>
         
         <div class="info-row">
-            <span class="info-label">Letztes Update</span>
+            <span class="info-label">Last update</span>
             <span class="info-value" id="lastUpdate">--:--:--</span>
         </div>
         
         <div class="info-row">
-            <span class="info-label">Koordinaten</span>
+            <span class="info-label">Coordinates</span>
             <span class="info-value" id="coords">--, --</span>
         </div>
 
         <button class="btn-center" onclick="centerMap()">
-            Auf Fahrrad zentrieren
+            Center on bike
         </button>
         
         <button class="btn-stolen report" id="btnStolen" onclick="toggleStolen()">
-            🚨 Als gestohlen melden
+            Report as stolen
         </button>
     </div>
 
@@ -316,5 +316,16 @@
     <script src="app.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
 
 
