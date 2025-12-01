@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚲 Fahrrad Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        
+        #map { height: 100vh; width: 100%; }
+        
+        .panel {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 220px;
+        }
+        
+        .panel h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.offline {
+            background: #f59e0b;
+            animation: none;
+        }
+
+        .status-dot.nofix {
+            background: #3b82f6;
+            animation: none;
+        }
+        
+        .status-dot.stolen {
+            background: #ef4444;
+            animation: pulse-red 0.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .info-label { color: #666; }
+        .info-value { font-weight: 600; }
+        
+        .stolen-banner {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(90deg, #dc2626, #ef4444);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            z-index: 1001;
+            animation: flash 1s infinite;
+        }
+        
+        .stolen-banner.active { display: block; }
+        
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.85; }
+        }
+        
+        .btn-stolen {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .btn-stolen.report {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .btn-stolen.report:hover {
+            background: #fecaca;
+        }
+        
+        .btn-stolen.clear {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        
+        .btn-stolen.clear:hover {
+            background: #bbf7d0;
+        }
+
+        .btn-center {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-center:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        .bike-icon {
+            font-size: 32px;
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
+        }
+
+        .bike-icon.stolen {
+            animation: shake 0.5s infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+
+        /* Mobile Anpassungen */
+        @media (max-width: 480px) {
+            .panel {
+                top: auto;
+                bottom: 15px;
+                right: 15px;
+                left: 15px;
+                min-width: auto;
+            }
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1002;
+            text-align: center;
+        }
+
+        .loading.hidden { display: none; }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Lade Position...</div>
+    </div>
+
+    <div class="stolen-banner" id="stolenBanner">
+        ⚠️ FAHRRAD ALS GESTOHLEN GEMELDET ⚠️
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="panel">
+        <h2>🚲 Bike Tracker</h2>
+        
+        <div class="status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Verbinde...</span>
+        </div>
+        
+        <div class="info-row">
+            <span class="info-label">Geschwindigkeit</span>
+            <span class="info-value" id="speed">-- km/h</span>
+        </div>
+        
+        <div class="info-row">
+            <span class="info-label">Kurs</span>
+            <span class="info-value" id="course">--°</span>
+        </div>
+        
+        <div class="info-row">
+            <span class="info-label">Letztes Update</span>
+            <span class="info-value" id="lastUpdate">--:--:--</span>
+        </div>
+        
+        <div class="info-row">
+            <span class="info-label">Koordinaten</span>
+            <span class="info-value" id="coords">--, --</span>
+        </div>
+
+        <button class="btn-center" onclick="centerMap()">
+            📍 Auf Fahrrad zentrieren
+        </button>
+        
+        <button class="btn-stolen report" id="btnStolen" onclick="toggleStolen()">
+            🚨 Als gestohlen melden
+        </button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
