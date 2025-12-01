@@ -16,9 +16,30 @@
 //
 // ============================================
 
+// Fallback-Konfiguration, falls Cloudflare-Variablen nicht verfügbar sind.
+// Trage hier die Werte ein, falls sie nicht als Env-Variablen gesetzt werden können.
+const STATIC_CONFIG = {
+    AWS_ACCESS_KEY: '',      // z.B. AKIA...
+    AWS_SECRET_KEY: '',      // z.B. wJalrXUtnF...
+    AWS_REGION: 'eu-central-1',
+    DYNAMODB_TABLE: '',
+    ADMIN_PIN: ''
+};
+
+function buildConfig(env) {
+    return {
+        AWS_ACCESS_KEY: env?.AWS_ACCESS_KEY ?? STATIC_CONFIG.AWS_ACCESS_KEY,
+        AWS_SECRET_KEY: env?.AWS_SECRET_KEY ?? STATIC_CONFIG.AWS_SECRET_KEY,
+        AWS_REGION: env?.AWS_REGION ?? STATIC_CONFIG.AWS_REGION,
+        DYNAMODB_TABLE: env?.DYNAMODB_TABLE ?? STATIC_CONFIG.DYNAMODB_TABLE,
+        ADMIN_PIN: env?.ADMIN_PIN ?? STATIC_CONFIG.ADMIN_PIN
+    };
+}
+
 export default {
     async fetch(request, env) {
         const url = new URL(request.url);
+        const config = buildConfig(env);
         
         // CORS Headers
         const corsHeaders = {
@@ -37,7 +58,7 @@ export default {
             // Route: GET /api/position - Aktuelle Position
             if (url.pathname === '/api/position' && request.method === 'GET') {
                 const device = url.searchParams.get('device') || 'pi9';
-                const data = await queryDynamoDB(env, device, 1);
+                const data = await queryDynamoDB(env, config, device, 1);
                 
                 if (!data.Items || data.Items.length === 0) {
                     return new Response('{}', { headers: corsHeaders });
@@ -54,7 +75,7 @@ export default {
                 const device = url.searchParams.get('device') || 'pi9';
                 const limit = parseInt(url.searchParams.get('limit')) || 100;
                 
-                const data = await queryDynamoDB(env, device, limit);
+                const data = await queryDynamoDB(env, config, device, limit);
                 
                 if (!data.Items) {
                     return new Response('[]', { headers: corsHeaders });
@@ -70,7 +91,7 @@ export default {
                 const { stolen, pin, device = 'pi9' } = body;
 
                 // PIN prüfen
-                if (pin !== env.ADMIN_PIN) {
+                if (pin !== config.ADMIN_PIN) {
                     return new Response(
                         JSON.stringify({ error: 'Ungültiger PIN' }), 
                         { status: 401, headers: corsHeaders }
@@ -94,14 +115,14 @@ export default {
             if (url.pathname === '/api/status' && request.method === 'GET') {
                 const device = url.searchParams.get('device') || 'pi9';
                 
-                const status = await env.BIKE_STATUS?.get(`stolen:${device}`);
-                if (status) {
-                    const parsed = JSON.parse(status);
-                    return new Response(JSON.stringify(parsed), { headers: corsHeaders });
-                }
-                
-                return new Response(JSON.stringify({ stolen: false }), { headers: corsHeaders });
+            const status = await env.BIKE_STATUS?.get(`stolen:${device}`);
+            if (status) {
+                const parsed = JSON.parse(status);
+                return new Response(JSON.stringify(parsed), { headers: corsHeaders });
             }
+            
+            return new Response(JSON.stringify({ stolen: false }), { headers: corsHeaders });
+        }
 
             // 404 für unbekannte Routen
             return new Response(
@@ -120,9 +141,9 @@ export default {
 };
 
 // DynamoDB Query ausführen
-async function queryDynamoDB(env, device, limit) {
-    const region = env.AWS_REGION || 'eu-central-1';
-    const tableName = env.DYNAMODB_TABLE;
+async function queryDynamoDB(env, config, device, limit) {
+    const region = config.AWS_REGION || 'eu-central-1';
+    const tableName = config.DYNAMODB_TABLE;
     
     const endpoint = `https://dynamodb.${region}.amazonaws.com`;
     const now = new Date();
@@ -141,7 +162,7 @@ async function queryDynamoDB(env, device, limit) {
 
     // AWS Signature Version 4
     const headers = await signRequest(
-        env,
+        config,
         'POST',
         endpoint,
         '/',
@@ -171,7 +192,7 @@ async function queryDynamoDB(env, device, limit) {
 }
 
 // AWS Signature V4
-async function signRequest(env, method, endpoint, path, body, service, region, amzDate, dateStamp) {
+async function signRequest(config, method, endpoint, path, body, service, region, amzDate, dateStamp) {
     const url = new URL(endpoint);
     const host = url.host;
 
@@ -185,10 +206,10 @@ async function signRequest(env, method, endpoint, path, body, service, region, a
     const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
     const stringToSign = `${algorithm}\n${amzDate}\n${credentialScope}\n${await sha256(canonicalRequest)}`;
 
-    const signingKey = await getSignatureKey(env.AWS_SECRET_KEY, dateStamp, region, service);
+    const signingKey = await getSignatureKey(config.AWS_SECRET_KEY, dateStamp, region, service);
     const signature = await hmacHex(signingKey, stringToSign);
 
-    const authorizationHeader = `${algorithm} Credential=${env.AWS_ACCESS_KEY}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+    const authorizationHeader = `${algorithm} Credential=${config.AWS_ACCESS_KEY}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
     return {
         'Authorization': authorizationHeader,
