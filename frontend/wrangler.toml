@@ -1,6 +1,5 @@
 name = "hslu-iot-bike"
 compatibility_date = "2025-12-01"
 
-[site]
-# Serve static assets from this folder when running wrangler in the frontend directory.
-bucket = "."
+# Cloudflare Pages (static assets from this folder)
+pages_build_output_dir = "."
