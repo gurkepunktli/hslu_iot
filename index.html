@@ -242,6 +242,78 @@
             white-space: nowrap;
         }
 
+        .hidden {
+            display: none !important;
+        }
+
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #e5e7eb, #f8fafc);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: white;
+            padding: 24px 28px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            width: 100%;
+            max-width: 360px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .login-card h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .login-card label {
+            display: block;
+            font-size: 14px;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .login-card input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            font-size: 14px;
+        }
+
+        .login-card button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #3b82f6;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.15s ease;
+        }
+
+        .login-card button:hover {
+            background: #2563eb;
+        }
+
+        .login-error {
+            color: #dc2626;
+            font-size: 13px;
+            min-height: 18px;
+        }
+
         @media (max-width: 480px) {
             .info-panel {
                 bottom: auto;
@@ -253,6 +325,22 @@
     </style>
 </head>
 <body>
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <h3>Login</h3>
+            <div>
+                <label for="loginUser">Username</label>
+                <input id="loginUser" type="text" autocomplete="username" />
+            </div>
+            <div>
+                <label for="loginPass">Password</label>
+                <input id="loginPass" type="password" autocomplete="current-password" />
+            </div>
+            <div class="login-error" id="loginError"></div>
+            <button id="loginButton">Sign in</button>
+        </div>
+    </div>
+
     <div class="loading" id="loading">
         <div class="spinner"></div>
         <div>Loading position...</div>
@@ -262,53 +350,55 @@
         BIKE REPORTED AS STOLEN
     </div>
     
-    <div id="map"></div>
-    
-    <div class="panel">
-        <h2>Bike Tracker</h2>
+    <div id="appContent" class="hidden">
+        <div id="map"></div>
         
-        <div class="status">
-            <div class="status-dot" id="statusDot"></div>
-            <span id="statusText">Connecting...</span>
-        </div>
-        
-        <div class="info-row">
-            <span class="info-label">Speed</span>
-            <span class="info-value" id="speed">-- km/h</span>
-        </div>
-        
-        <div class="info-row">
-            <span class="info-label">Course</span>
-            <span class="info-value" id="course">--&deg;</span>
-        </div>
-        
-        <div class="info-row">
-            <span class="info-label">Last update</span>
-            <span class="info-value" id="lastUpdate">--:--:--</span>
-        </div>
-        
-        <div class="info-row">
-            <span class="info-label">Coordinates</span>
-            <span class="info-value" id="coords">--, --</span>
+        <div class="panel">
+            <h2>Bike Tracker</h2>
+            
+            <div class="status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Speed</span>
+                <span class="info-value" id="speed">-- km/h</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Course</span>
+                <span class="info-value" id="course">--&deg;</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Last update</span>
+                <span class="info-value" id="lastUpdate">--:--:--</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Coordinates</span>
+                <span class="info-value" id="coords">--, --</span>
+            </div>
+
+            <button class="btn-center" onclick="centerMap()">
+                Center on bike
+            </button>
+            
+            <button class="btn-stolen report" id="btnStolen" onclick="toggleStolen()">
+                Report as stolen
+            </button>
         </div>
 
-        <button class="btn-center" onclick="centerMap()">
-            Center on bike
-        </button>
-        
-        <button class="btn-stolen report" id="btnStolen" onclick="toggleStolen()">
-            Report as stolen
-        </button>
-    </div>
-
-    <div class="info-panel">
-        <img
-            src="hslu_logo.png"
-            alt="HSLU Logo"
-            class="info-logo"
-        />
-        <div class="info-divider"></div>
-        <div class="info-text">IoT Module HS25</div>
+        <div class="info-panel">
+            <img
+                src="hslu_logo.png"
+                alt="HSLU Logo"
+                class="info-logo"
+            />
+            <div class="info-divider"></div>
+            <div class="info-text">IoT Module HS25</div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
