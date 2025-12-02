@@ -86,7 +86,7 @@
             </div>
 
             <div class="flex flex-col gap-3">
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 gap-3">
                     <button class="btn btn-primary w-full" id="btnStartSystem" onclick="startSystem()">
                         <span class="text-lg">▶</span>
                         <span class="font-semibold">Start System</span>
@@ -96,8 +96,8 @@
                         <span class="font-semibold">Stop System</span>
                     </button>
                 </div>
-                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600 text-center shadow-sm" id="systemStatus">System idle</div>
-                <button class="btn btn-error" id="btnStolen" onclick="toggleStolen()">
+                <div class="rounded-xl border-2 border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 text-center shadow-sm" id="systemStatus">System idle</div>
+                <button class="btn btn-error w-full" id="btnStolen" onclick="toggleStolen()">
                     Report as stolen
                 </button>
             </div>
