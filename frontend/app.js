@@ -8,6 +8,7 @@ let lastPosition = null;
 let lastGpsFix = null; // Last valid GPS fix with coordinates
 let systemRunning = false; // Track if system (GPS + MQTT) is running
 let currentStatus = 'unknown'; // Track status badge state
+let updateTimer = null; // Timer for update countdown animation
 const trackPoints = [];
 
 // Initialize map
@@ -686,6 +687,35 @@ async function loadHistory() {
     }
 }
 
+// Update countdown animation
+function startUpdateCountdown() {
+    const progressCircle = document.getElementById('updateProgress');
+    if (!progressCircle) return;
+
+    const circumference = 2 * Math.PI * 12; // radius = 12
+    const duration = CONFIG.UPDATE_INTERVAL;
+    const steps = 30; // 30 steps for smooth animation
+    const stepDuration = duration / steps;
+    let currentStep = 0;
+
+    // Reset to full
+    progressCircle.style.strokeDashoffset = '0';
+
+    if (updateTimer) clearInterval(updateTimer);
+
+    updateTimer = setInterval(() => {
+        currentStep++;
+        const progress = currentStep / steps;
+        const offset = circumference * progress;
+        progressCircle.style.strokeDashoffset = `${offset}`;
+
+        if (currentStep >= steps) {
+            currentStep = 0;
+            progressCircle.style.strokeDashoffset = '0';
+        }
+    }, stepDuration);
+}
+
 // App starten
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
@@ -698,8 +728,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Default system status
     setSystemStatus('System idle', 'muted');
 
+    // Start update countdown animation
+    startUpdateCountdown();
+
     // Regelmaessige Updates
-    setInterval(updatePosition, CONFIG.UPDATE_INTERVAL);
+    setInterval(() => {
+        updatePosition();
+        startUpdateCountdown(); // Restart countdown on each update
+    }, CONFIG.UPDATE_INTERVAL);
 });
 
 // Normalisiert Koordinaten/Nummern aus API

@@ -68,6 +68,38 @@
             0% { transform: scale(0.8); opacity: 0.8; }
             100% { transform: scale(2); opacity: 0; }
         }
+        /* Update Progress Circle */
+        .update-circle {
+            position: relative;
+            width: 32px;
+            height: 32px;
+        }
+        .update-circle svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+        .update-circle circle {
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+        }
+        .update-circle .bg {
+            stroke: rgba(255, 255, 255, 0.2);
+        }
+        .update-circle .progress {
+            stroke: rgba(255, 255, 255, 0.9);
+            stroke-dasharray: 75.4;
+            stroke-dashoffset: 75.4;
+            transition: stroke-dashoffset 0.1s linear;
+        }
+        .update-circle .icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-900">
@@ -90,13 +122,22 @@
                 </div>
 
             <div class="flex items-center justify-between rounded-2xl bg-gradient-to-r from-indigo-700 to-blue-600 text-white px-5 py-4 shadow-lg">
-                <div>
+                <div class="flex-1">
                     <div class="text-lg font-bold" id="statusText">Connecting...</div>
                     <div class="text-xs opacity-85" id="statusSub">Waiting for first signal</div>
                 </div>
-                <div class="relative">
-                    <div class="badge-dot" id="statusDot"></div>
-                    <div class="pulse-ring absolute inset-0 hidden" id="liveIndicator"></div>
+                <div class="flex items-center gap-3">
+                    <div class="update-circle" id="updateCircle">
+                        <svg viewBox="0 0 28 28">
+                            <circle class="bg" cx="14" cy="14" r="12"/>
+                            <circle class="progress" cx="14" cy="14" r="12" id="updateProgress"/>
+                        </svg>
+                        <div class="icon">⟳</div>
+                    </div>
+                    <div class="relative">
+                        <div class="badge-dot" id="statusDot"></div>
+                        <div class="pulse-ring absolute inset-0 hidden" id="liveIndicator"></div>
+                    </div>
                 </div>
             </div>
 
