@@ -228,11 +228,7 @@ function setOnlineStatus(message) {
     }
     setLamp('lampConnection', 'online', 'Online');
     setLamp('lampGps', 'online', 'GPS fix OK');
-   ;
-    if (!systemRunning) {
-        systemRunning = true;
-        updateButtonVisibility();
-    }
+    // Don't auto-set systemRunning - user controls this with Start/Stop buttons
 }
 
 // Offline-Status setzen
@@ -245,7 +241,6 @@ function setOfflineStatus(message) {
     }
     setLamp('lampConnection', 'offline', message || 'No signal');
     setLamp('lampGps', 'offline', '--');
-   ;
 }
 
 // Error: No GPS fix available
@@ -258,11 +253,7 @@ function setNoFixStatus(message) {
     }
     setLamp('lampConnection', 'online', 'Online');
     setLamp('lampGps', 'nofix', message || 'No GPS fix');
-   ;
-    if (!systemRunning) {
-        systemRunning = true;
-        updateButtonVisibility();
-    }
+    // Don't auto-set systemRunning - user controls this with Start/Stop buttons
 }
 
 // Update button visibility based on system state
