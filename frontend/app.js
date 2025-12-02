@@ -276,9 +276,17 @@ function setMainStatus(state, title, subtitle) {
     const sub = document.getElementById('statusSub');
     const dot = document.getElementById('statusDot');
     const liveIndicator = document.getElementById('liveIndicator');
+    const badge = document.getElementById('statusBadge');
 
     if (text) text.textContent = title || '';
     if (sub) sub.textContent = subtitle || '';
+
+    // Update badge background color based on state
+    if (badge) {
+        badge.className = 'flex items-center justify-between rounded-2xl text-white px-5 py-4 shadow-lg transition-all duration-300';
+        badge.classList.add(state || 'connecting');
+    }
+
     if (dot) {
         const liveClass = state === 'online' ? 'live' : '';
         dot.className = `badge-dot ${state || ''} ${liveClass}`.trim();

@@ -18,6 +18,12 @@
         .badge-dot.offline { background: #f97316; box-shadow: 0 0 0 8px rgba(249,115,22,0.18); }
         .badge-dot.nofix { background: #f59e0b; box-shadow: 0 0 0 8px rgba(245,158,11,0.18); }
         .badge-dot.alert { background: #ef4444; box-shadow: 0 0 0 8px rgba(239,68,68,0.25); }
+        /* Status Badge Background Colors */
+        #statusBadge.online { background: linear-gradient(135deg, #10b981, #059669); }
+        #statusBadge.offline { background: linear-gradient(135deg, #f97316, #ea580c); }
+        #statusBadge.nofix { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        #statusBadge.alert { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        #statusBadge.connecting { background: linear-gradient(135deg, #6366f1, #4f46e5); }
         .badge-dot.live { animation: pulse 1.6s infinite ease-out; }
         .lamp .dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; }
         .lamp.online .dot { background: #22c55e; box-shadow: 0 0 0 6px rgba(34,197,94,0.15); }
@@ -114,7 +120,7 @@
                     <h2 class="text-2xl font-extrabold text-slate-900 leading-tight mt-1">Live Status</h2>
                 </div>
 
-            <div class="flex items-center justify-between rounded-2xl bg-gradient-to-r from-indigo-700 to-blue-600 text-white px-5 py-4 shadow-lg">
+            <div class="flex items-center justify-between rounded-2xl text-white px-5 py-4 shadow-lg transition-all duration-300" id="statusBadge">
                 <div class="flex-1">
                     <div class="text-lg font-bold" id="statusText">Connecting...</div>
                     <div class="text-xs opacity-85" id="statusSub">Waiting for first signal</div>
