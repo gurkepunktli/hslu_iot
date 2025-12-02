@@ -300,7 +300,12 @@
             GPS fix anfordern
         </button>
         <div class="info-value" id="jobStatus" style="margin-top:6px; min-height:18px;">&nbsp;</div>
-        
+
+        <button class="btn-center" id="btnMqtt" onclick="startMqttForwarder()">
+            Start MQTT Forwarder
+        </button>
+        <div class="info-value" id="mqttStatus" style="margin-top:6px; min-height:18px;">&nbsp;</div>
+
         <button class="btn-stolen report" id="btnStolen" onclick="toggleStolen()">
             Report as stolen
         </button>

@@ -99,6 +99,11 @@ def execute_job(job):
             result = execute_gps_read(params)
             status = "done"
             output = result
+        elif job_type == "mqtt_forward":
+            # Start MQTT forwarder script
+            result = execute_mqtt_forwarder(params)
+            status = "done"
+            output = result
         else:
             # Unknown job type
             status = "failed"
@@ -140,6 +145,43 @@ def execute_gps_read(params):
         raise Exception(f"GPS reader failed: {result.stderr}")
 
     return result.stdout.strip()
+
+
+def execute_mqtt_forwarder(params):
+    """Start MQTT forwarder script"""
+    script_path = params.get("script_path", "mqtt_forwarder.py")
+    print(f"[{datetime.now()}] Starting MQTT forwarder: {script_path}")
+
+    # Resolve script path
+    if not os.path.isabs(script_path):
+        # If relative path, look in the same directory as job_poller.py
+        script_path = Path(__file__).parent / script_path
+
+    if not os.path.exists(script_path):
+        raise FileNotFoundError(f"MQTT forwarder script not found: {script_path}")
+
+    # Start the MQTT forwarder in the background
+    process = subprocess.Popen(
+        [sys.executable, str(script_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
+    # Wait a moment to check if it started successfully
+    time.sleep(2)
+    poll_result = process.poll()
+
+    if poll_result is not None:
+        # Process already terminated (error)
+        stdout, stderr = process.communicate()
+        raise Exception(f"MQTT forwarder failed to start: {stderr}")
+
+    # Process is still running
+    pid = process.pid
+    print(f"[{datetime.now()}] MQTT forwarder started with PID: {pid}")
+
+    return f"MQTT forwarder started successfully (PID: {pid})"
 
 
 def report_result(job_id, status, output, duration_ms):

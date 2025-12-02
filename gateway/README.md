@@ -6,6 +6,7 @@ This directory contains the Raspberry Pi gateway code that polls the backend for
 
 - `job_poller.py` - Main polling script that runs continuously
 - `gps_reader.py` - GPS reading script (placeholder - needs implementation)
+- `mqtt_forwarder.py` - MQTT forwarder that bridges local broker to AWS IoT Core
 - `requirements.txt` - Python dependencies
 
 ## Setup on Raspberry Pi
@@ -123,6 +124,47 @@ sudo systemctl restart gateway-poller
 # Disable service
 sudo systemctl disable gateway-poller
 ```
+
+## Supported Job Types
+
+The job poller supports the following job types:
+
+### 1. `gps_read` - Read GPS Position
+Executes the `gps_reader.py` script to read GPS coordinates.
+
+**Job parameters:**
+```json
+{
+  "type": "gps_read",
+  "params": {
+    "device": "pi9"
+  }
+}
+```
+
+### 2. `mqtt_forward` - Start MQTT Forwarder
+Starts the `mqtt_forwarder.py` script in the background to forward MQTT messages from local broker to AWS IoT Core.
+
+**Job parameters:**
+```json
+{
+  "type": "mqtt_forward",
+  "params": {
+    "script_path": "mqtt_forwarder.py"
+  }
+}
+```
+
+The MQTT forwarder:
+- Subscribes to `gateway/#` on local broker (127.0.0.1:1883)
+- Forwards messages to AWS IoT Core with TLS authentication
+- Maps topics: `gateway/*` → `sensors/*`
+- Rate limits to 1 message per 10 seconds per topic
+
+**Certificate requirements:**
+- `/etc/mosquitto/certs/root-CA.crt`
+- `/etc/mosquitto/certs/iot_gateway.cert.pem`
+- `/etc/mosquitto/certs/iot_gateway.private.key`
 
 ## Implementing GPS Reading
 
