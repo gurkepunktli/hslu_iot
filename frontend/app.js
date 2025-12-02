@@ -10,6 +10,8 @@ let systemRunning = false; // Track if system (GPS + MQTT) is running
 let currentStatus = 'unknown'; // Track status badge state
 let updateTimer = null; // Timer for update countdown animation
 const trackPoints = [];
+const historyMarkers = []; // Markers for last 10 GPS fixes
+const maxHistoryMarkers = 10;
 
 // Initialize map
 function initMap() {
@@ -50,6 +52,47 @@ function createBikeIcon(stolen = false) {
         iconSize: [32, 32],
         iconAnchor: [16, 16]
     });
+}
+
+// Create small circular marker for history points
+function createHistoryMarker(lat, lon, timestamp) {
+    const date = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp);
+    const dateStr = date.toLocaleDateString('en-GB');
+    const timeStr = date.toLocaleTimeString('en-GB');
+
+    const circleMarker = L.circleMarker([lat, lon], {
+        radius: 6,
+        fillColor: '#3b82f6',
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8
+    });
+
+    circleMarker.bindPopup(`
+        <div style="font-family: 'Inter', sans-serif; font-size: 13px;">
+            <strong style="font-size: 14px; color: #0f172a;">GPS Fix</strong><br/>
+            <span style="color: #64748b;">Date:</span> <strong>${dateStr}</strong><br/>
+            <span style="color: #64748b;">Time:</span> <strong>${timeStr}</strong><br/>
+            <span style="color: #64748b;">Coordinates:</span><br/>
+            <strong>${lat.toFixed(6)}, ${lon.toFixed(6)}</strong>
+        </div>
+    `);
+
+    return circleMarker;
+}
+
+// Add a history marker to the map and maintain max count
+function addHistoryMarker(lat, lon, timestamp) {
+    // Remove oldest marker if we exceed the limit
+    if (historyMarkers.length >= maxHistoryMarkers) {
+        const oldest = historyMarkers.shift();
+        map.removeLayer(oldest);
+    }
+
+    const marker = createHistoryMarker(lat, lon, timestamp);
+    marker.addTo(map);
+    historyMarkers.push(marker);
 }
 
 // Position aktualisieren
@@ -133,6 +176,9 @@ async function updatePosition() {
         // Marker erstellen oder aktualisieren
         ensureMarker(data.lat, data.lon, data.stolen);
 
+        // Add a history marker for this GPS fix
+        addHistoryMarker(data.lat, data.lon, lastFixTs);
+
         // Track aktualisieren
         trackPoints.push(latlng);
         if (trackPoints.length > CONFIG.MAX_TRACK_POINTS) {
@@ -155,6 +201,9 @@ async function updatePosition() {
         // UI aktualisieren
         updateUI(data);
 
+        // Set status to online since we have fresh data
+        setOnlineStatus();
+
         // Diebstahl-Status aus /api/status holen (persistenter Zustand)
         try {
             const statusRes = await fetch(`${CONFIG.API_URL}/api/status?device=${CONFIG.DEVICE_ID}`);
@@ -167,15 +216,6 @@ async function updatePosition() {
         } catch (e) {
             console.warn('Failed to load status:', e);
             updateStolenUI(isStolen);
-        }
-
-        // Set status based on freshness
-        if (!updateFresh) {
-            setOfflineStatus('Signal too old');
-        } else if (!fixFresh) {
-            setNoFixStatus('GPS fix too old');
-        } else {
-            setOnlineStatus();
         }
 
     } catch (err) {
@@ -657,6 +697,14 @@ async function loadHistory() {
         const latest = data[0];
         // Last valid fix (may be older)
         const latestValidFix = findLatestValidFix(data);
+
+        // Get last 10 valid fixes for history markers
+        const last10ValidFixes = data.filter(p => isValidFix(p)).slice(0, maxHistoryMarkers);
+
+        // Add history markers for last 10 fixes (newest first)
+        last10ValidFixes.forEach(p => {
+            addHistoryMarker(p.lat, p.lon, p.ts);
+        });
 
         // Points in chronological order for the track
         data.slice().reverse().forEach(p => {
