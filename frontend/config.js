@@ -26,6 +26,9 @@ const CONFIG = {
     // Maximale Track-Punkte (aeltere werden entfernt)
     MAX_TRACK_POINTS: 500,
 
+    // Wie viele Historienpunkte laden (fuer letzten Fix)
+    HISTORY_LIMIT: 500,
+
     // Staleness-Checks fuer Online-/GPS-Anzeige
     STALE_UPDATE_MS: 60_000, // wie alt darf das letzte Signal sein, um als online zu gelten
     STALE_FIX_MS: 120_000,   // wie alt darf der letzte GPS-Fix sein

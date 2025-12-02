@@ -598,7 +598,8 @@ function ensureMarker(lat, lon, stolenFlag) {
 // Historie laden
 async function loadHistory() {
     try {
-        const res = await fetch(`${CONFIG.API_URL}/api/track?device=${CONFIG.DEVICE_ID}&limit=100`);
+        const limit = CONFIG.HISTORY_LIMIT || 500;
+        const res = await fetch(`${CONFIG.API_URL}/api/track?device=${CONFIG.DEVICE_ID}&limit=${limit}`);
 
         if (!res.ok) return;
 
@@ -607,12 +608,14 @@ async function loadHistory() {
 
         if (!Array.isArray(data) || data.length === 0) return;
 
-        // Neuester Punkt fuer das UI merken
+        // Neuester Punkt fuer das UI merken (kann invalid sein)
         const latest = data[0];
+        // Letzter gueltiger Fix (auch aelter)
+        const latestValidFix = findLatestValidFix(data);
 
         // Punkte in chronologischer Reihenfolge fuer den Track
         data.slice().reverse().forEach(p => {
-            if (Number.isFinite(p.lat) && Number.isFinite(p.lon)) {
+            if (isValidFix(p)) {
                 trackPoints.push([p.lat, p.lon]);
             }
         });
@@ -627,16 +630,18 @@ async function loadHistory() {
             map.fitBounds(trackLine.getBounds(), { padding: [50, 50] });
         }
 
-        // Fallback: letzten Stand im Panel anzeigen
-        if (latest && Number.isFinite(latest.lat) && Number.isFinite(latest.lon)) {
-            lastPosition = latest;
-            lastGpsFix = latest;
-            updateUI(latest);
-            updateLastFixTimestamp(latest.ts);
-            ensureMarker(latest.lat, latest.lon, latest.stolen);
+        // Fallback: letzten Stand im Panel anzeigen (gueltiger Fix bevorzugt)
+        const displayPoint = latestValidFix || (isValidFix(latest) ? latest : null);
+        if (displayPoint) {
+            lastPosition = displayPoint;
+            lastGpsFix = displayPoint;
+            updateUI(displayPoint);
+            updateLastFixTimestamp(displayPoint.ts);
+            ensureMarker(displayPoint.lat, displayPoint.lon, displayPoint.stolen);
 
-            if (latest.ts) {
-                let tsValue = latest.ts;
+            const tsCandidate = displayPoint.ts || latest?.ts;
+            if (tsCandidate) {
+                let tsValue = tsCandidate;
                 if (typeof tsValue === 'string') {
                     tsValue = parseInt(tsValue, 10);
                 }
@@ -685,4 +690,16 @@ function normalizePoint(p) {
     const speed = p.speed != null ? parseFloat(p.speed) : p.speed_kn != null ? parseFloat(p.speed_kn) : 0;
     const course = p.course != null ? parseFloat(p.course) : p.course_deg != null ? parseFloat(p.course_deg) : 0;
     return { ...p, lat, lon, speed, course };
+}
+
+function isValidFix(p) {
+    return Number.isFinite(p?.lat) && Number.isFinite(p?.lon) && !(p.lat === 0 && p.lon === 0);
+}
+
+function findLatestValidFix(list) {
+    if (!Array.isArray(list)) return null;
+    for (const p of list) {
+        if (isValidFix(p)) return p;
+    }
+    return null;
 }
