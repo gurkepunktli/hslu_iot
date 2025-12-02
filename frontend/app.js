@@ -629,7 +629,10 @@ async function loadHistory() {
         // Fallback: letzten Stand im Panel anzeigen
         if (latest && latest.lat && latest.lon) {
             lastPosition = latest;
+            lastGpsFix = latest;
             updateUI(latest);
+            updateLastFixTimestamp(latest.ts);
+            ensureMarker(latest.lat, latest.lon, latest.stolen);
 
             if (latest.ts) {
                 let tsValue = latest.ts;
