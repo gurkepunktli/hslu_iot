@@ -444,14 +444,14 @@ function setSystemStatus(text, mode = 'muted') {
 // System komplett starten (GPS Reader + MQTT Forwarder)
 async function startSystem() {
     const btn = document.getElementById('btnStartSystem');
-    const spinner = document.getElementById('statusLoadingSpinner');
+    const updateCircle = document.getElementById('updateCircle');
     if (!btn) return;
 
     btn.disabled = true;
     btn.innerHTML = `<svg class="animate-spin h-5 w-5 mx-auto" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="60" stroke-linecap="round"></circle>
     </svg>`;
-    if (spinner) spinner.classList.remove('hidden');
+    if (updateCircle) updateCircle.classList.add('hidden');
 
     try {
         // Step 1: Start GPS Reader
@@ -521,7 +521,7 @@ async function startSystem() {
         setSystemStatus('✓ System running (GPS + MQTT)', 'ok');
         btn.disabled = false;
         btn.textContent = 'Start system';
-        if (spinner) spinner.classList.add('hidden');
+        if (updateCircle) updateCircle.classList.remove('hidden');
         systemRunning = true;
         updateButtonVisibility();
 
@@ -530,21 +530,21 @@ async function startSystem() {
         setSystemStatus(`Error: ${err.message}`, 'alert');
         btn.disabled = false;
         btn.textContent = 'Start system';
-        if (spinner) spinner.classList.add('hidden');
+        if (updateCircle) updateCircle.classList.remove('hidden');
     }
 }
 
 // Stop complete system (MQTT Forwarder + GPS Reader)
 async function stopSystem() {
     const btn = document.getElementById('btnStopSystem');
-    const spinner = document.getElementById('statusLoadingSpinner');
+    const updateCircle = document.getElementById('updateCircle');
     if (!btn) return;
 
     btn.disabled = true;
     btn.innerHTML = `<svg class="animate-spin h-5 w-5 mx-auto" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="60" stroke-linecap="round"></circle>
     </svg>`;
-    if (spinner) spinner.classList.remove('hidden');
+    if (updateCircle) updateCircle.classList.add('hidden');
 
     try {
         // Step 1: Stop MQTT Forwarder
@@ -614,7 +614,7 @@ async function stopSystem() {
         setSystemStatus('✓ System stopped', 'ok');
         btn.disabled = false;
         btn.textContent = 'Stop system';
-        if (spinner) spinner.classList.add('hidden');
+        if (updateCircle) updateCircle.classList.remove('hidden');
         systemRunning = false;
         updateButtonVisibility();
 
@@ -623,7 +623,7 @@ async function stopSystem() {
         setSystemStatus(`Error: ${err.message}`, 'alert');
         btn.disabled = false;
         btn.textContent = 'Stop system';
-        if (spinner) spinner.classList.add('hidden');
+        if (updateCircle) updateCircle.classList.remove('hidden');
     }
 }
 
