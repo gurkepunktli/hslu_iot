@@ -4,18 +4,20 @@
 echo "=== Gateway Job Poller Setup ==="
 echo ""
 
-# Get current user
+# Get current user and script directory
 CURRENT_USER=$(whoami)
 CURRENT_HOME=$(eval echo ~$CURRENT_USER)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo "Current user: $CURRENT_USER"
 echo "Home directory: $CURRENT_HOME"
+echo "Script directory: $SCRIPT_DIR"
 echo ""
 
-# Check if job_poller.py exists
-if [ ! -f "$CURRENT_HOME/gateway/job_poller.py" ]; then
-    echo "ERROR: job_poller.py not found at $CURRENT_HOME/gateway/job_poller.py"
-    echo "Please copy the gateway folder to $CURRENT_HOME first"
+# Check if job_poller.py exists in current directory
+if [ ! -f "$SCRIPT_DIR/job_poller.py" ]; then
+    echo "ERROR: job_poller.py not found at $SCRIPT_DIR/job_poller.py"
+    echo "Please run this script from the gateway directory"
     exit 1
 fi
 
@@ -29,8 +31,8 @@ After=network.target
 [Service]
 Type=simple
 User=$CURRENT_USER
-WorkingDirectory=$CURRENT_HOME/gateway
-ExecStart=/usr/bin/python3 $CURRENT_HOME/gateway/job_poller.py
+WorkingDirectory=$SCRIPT_DIR
+ExecStart=/usr/bin/python3 $SCRIPT_DIR/job_poller.py
 Restart=always
 RestartSec=10
 
