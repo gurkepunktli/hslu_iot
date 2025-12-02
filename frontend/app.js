@@ -7,20 +7,21 @@ let isStolen = false;
 let lastPosition = null;
 let lastGpsFix = null; // Last valid GPS fix with coordinates
 let systemRunning = false; // Track if system (GPS + MQTT) is running
+let currentStatus = 'unknown'; // Track status badge state
 const trackPoints = [];
 
 // Initialize map
 function initMap() {
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
+        attribution: 'OpenStreetMap contributors'
     });
 
     const satellite = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         {
             maxZoom: 19,
-            attribution: 'Tiles © Esri'
+            attribution: 'Tiles by Esri'
         }
     );
 
@@ -54,13 +55,12 @@ function createBikeIcon(stolen = false) {
 async function updatePosition() {
     try {
         const res = await fetch(`${CONFIG.API_URL}/api/position?device=${CONFIG.DEVICE_ID}`);
-        
         if (!res.ok) {
             throw new Error(`HTTP ${res.status}`);
         }
-        
+
         const data = await res.json();
-        
+
         // Loading ausblenden
         document.getElementById('loading').classList.add('hidden');
 
@@ -91,9 +91,25 @@ async function updatePosition() {
             return;
         }
 
+        const now = Date.now();
+        const lastUpdateMs = toMs(lastUpdateTs);
+        const lastFixMs = toMs(lastFixTs);
+        const updateFresh = !!lastUpdateMs && now - lastUpdateMs <= CONFIG.STALE_UPDATE_MS;
+        const fixFresh = !!lastFixMs && now - lastFixMs <= CONFIG.STALE_FIX_MS;
+
         // Connection but no valid GPS fix
         if (!hasValidCoords || isZeroCoords) {
-            setNoFixStatus();
+            setNoFixStatus('Kein GPS-Fix verfuegbar');
+            return;
+        }
+
+        if (!updateFresh) {
+            setOfflineStatus('Letztes Signal zu alt');
+            return;
+        }
+
+        if (!fixFresh) {
+            setNoFixStatus('GPS-Fix zu alt');
             return;
         }
 
@@ -107,7 +123,7 @@ async function updatePosition() {
         // Update last GPS fix timestamp
         updateLastFixTimestamp(lastFixTs);
         const latlng = [data.lat, data.lon];
-        
+
         // Marker erstellen oder aktualisieren
         if (marker) {
             marker.setLatLng(latlng);
@@ -116,15 +132,15 @@ async function updatePosition() {
             marker = L.marker(latlng, { icon: createBikeIcon(data.stolen) }).addTo(map);
             map.setView(latlng, 16);
         }
-        
+
         // Track aktualisieren
         trackPoints.push(latlng);
         if (trackPoints.length > CONFIG.MAX_TRACK_POINTS) {
             trackPoints.shift();
         }
-        
+
         const trackColor = data.stolen ? CONFIG.TRACK_COLOR_STOLEN : CONFIG.TRACK_COLOR_NORMAL;
-        
+
         if (trackLine) {
             trackLine.setLatLngs(trackPoints);
             trackLine.setStyle({ color: trackColor });
@@ -135,7 +151,7 @@ async function updatePosition() {
                 opacity: 0.7
             }).addTo(map);
         }
-        
+
         // UI aktualisieren
         updateUI(data);
 
@@ -153,23 +169,8 @@ async function updatePosition() {
             updateStolenUI(isStolen);
         }
 
-        // Online/Offline anhand Alter des letzten Signals (10 Minuten)
-        let tsValue = lastUpdateTs || data.ts;
-        if (typeof tsValue === 'string') {
-            tsValue = parseInt(tsValue, 10);
-        }
-        const tsDate = new Date(tsValue);
-        if (!isNaN(tsDate.getTime())) {
-            const ageMs = Date.now() - tsDate.getTime();
-            const tenMinutesMs = 10 * 60 * 1000;
-            if (ageMs >= 0 && ageMs <= tenMinutesMs) {
-                setOnlineStatus();
-            } else {
-                setOfflineStatus();
-            }
-        } else {
-            setOfflineStatus();
-        }
+        // Online-Status setzen (pruefungen oben)
+        setOnlineStatus();
 
     } catch (err) {
         console.error('Update failed:', err);
@@ -200,25 +201,29 @@ function updateLastFixTimestamp(ts) {
 
 // UI mit Daten aktualisieren
 function updateUI(data) {
-    // Knoten zu km/h umrechnen
-    const speedKmh = (data.speed * 1.852).toFixed(1);
-
+    const speedKnRaw = data.speed != null ? parseFloat(data.speed) : 0;
+    const speedKn = Number.isFinite(speedKnRaw) ? speedKnRaw : 0;
+    const speedKmh = (speedKn * 1.852).toFixed(1);
     document.getElementById('speed').textContent = `${speedKmh} km/h`;
-    document.getElementById('course').textContent = (data.course?.toFixed(0) || 0) + '\u00B0';
+
+    const courseRaw = data.course != null ? parseFloat(data.course) : 0;
+    const course = Number.isFinite(courseRaw) ? courseRaw : 0;
+    document.getElementById('course').textContent = course.toFixed(0) + '\u00B0';
     document.getElementById('coords').textContent = `${data.lat.toFixed(5)}, ${data.lon.toFixed(5)}`;
 }
 
 // Online-Status setzen
-function setOnlineStatus() {
+function setOnlineStatus(message) {
     const badge = document.getElementById('statusBadge');
     const text = document.getElementById('statusText');
     badge.className = 'status-badge';
+    currentStatus = 'online';
     if (isStolen) {
         badge.classList.add('stolen');
         text.textContent = 'STOLEN';
     } else {
         badge.classList.add('online');
-        text.textContent = 'Online';
+        text.textContent = message || 'Online';
     }
     if (!systemRunning) {
         systemRunning = true;
@@ -227,20 +232,21 @@ function setOnlineStatus() {
 }
 
 // Offline-Status setzen
-function setOfflineStatus() {
+function setOfflineStatus(message) {
     const badge = document.getElementById('statusBadge');
     const text = document.getElementById('statusText');
     badge.className = 'status-badge offline';
-    text.textContent = 'No connection';
-    // Don't change systemRunning here - user might have started system but lost connection temporarily
+    text.textContent = message || 'No connection';
+    currentStatus = 'offline';
 }
 
 // Error: No GPS fix available
-function setNoFixStatus() {
+function setNoFixStatus(message) {
     const badge = document.getElementById('statusBadge');
     const text = document.getElementById('statusText');
+    currentStatus = 'nofix';
     badge.className = 'status-badge nofix';
-    text.textContent = 'No GPS fix available';
+    text.textContent = message || 'No GPS fix available';
     if (!systemRunning) {
         systemRunning = true;
         updateButtonVisibility();
@@ -261,7 +267,6 @@ function updateButtonVisibility() {
     }
 }
 
-
 // Diebstahl-UI aktualisieren
 function updateStolenUI(stolen) {
     isStolen = stolen;
@@ -279,13 +284,12 @@ function updateStolenUI(stolen) {
         btn.textContent = 'Unlock bike';
     } else {
         banner.classList.remove('active');
-        // Restore appropriate status based on current state
-        if (systemRunning) {
-            badge.className = 'status-badge online';
-            text.textContent = 'Online';
+        if (currentStatus === 'online') {
+            setOnlineStatus();
+        } else if (currentStatus === 'nofix') {
+            setNoFixStatus();
         } else {
-            badge.className = 'status-badge offline';
-            text.textContent = 'No connection';
+            setOfflineStatus();
         }
         btn.className = 'btn-stolen report';
         btn.textContent = 'Report as stolen';
@@ -296,43 +300,42 @@ function updateStolenUI(stolen) {
 async function toggleStolen() {
     const pin = prompt('Enter security PIN:');
     if (!pin) return;
-    
+
     const btn = document.getElementById('btnStolen');
     btn.disabled = true;
     btn.textContent = 'Saving...';
-    
+
     try {
         const res = await fetch(`${CONFIG.API_URL}/api/stolen`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                stolen: !isStolen, 
+            body: JSON.stringify({
+                stolen: !isStolen,
                 pin: pin,
-                device: CONFIG.DEVICE_ID 
+                device: CONFIG.DEVICE_ID
             })
         });
-        
-        const data = await res.json();
-        
-        if (data.error) {
-            alert('Error: ' + data.error);
-            updateStolenUI(isStolen); // Reset button
+
+        const result = await res.json();
+
+        if (result.error) {
+            alert('Error: ' + result.error);
+            updateStolenUI(isStolen);
             return;
         }
-        
-        updateStolenUI(data.stolen);
-        
-        // Marker-Icon aktualisieren
+
+        updateStolenUI(result.stolen);
+
         if (marker) {
-            marker.setIcon(createBikeIcon(data.stolen));
+            marker.setIcon(createBikeIcon(result.stolen));
         }
-        
+
     } catch (err) {
         console.error('Error:', err);
         alert('Connection error. Please try again.');
-        updateStolenUI(isStolen); // Reset button
+        updateStolenUI(isStolen);
     }
-    
+
     btn.disabled = false;
 }
 
@@ -346,7 +349,7 @@ async function startSystem() {
 
     try {
         // Step 1: Start GPS Reader
-        statusEl.textContent = 'Starting GPS Reader on Pi9...';
+        statusEl.textContent = 'Starting GPS Reader...';
 
         const gpsRes = await fetch(`${CONFIG.API_URL}/api/job`, {
             method: 'POST',
@@ -366,14 +369,14 @@ async function startSystem() {
         const gpsJobId = gpsData.job_id;
 
         // Wait for GPS Reader to finish
-        statusEl.textContent = 'GPS Pi is working...';
+        statusEl.textContent = 'GPS Reader running...';
         const gpsReady = await waitForJob(gpsJobId);
 
         if (!gpsReady) {
             throw new Error('GPS Reader could not be started');
         }
 
-        statusEl.textContent = '✓ GPS Reader running. Starting MQTT Forwarder...';
+        statusEl.textContent = 'GPS Reader ok. Starting MQTT Forwarder...';
 
         // Step 2: Start MQTT Forwarder
         const mqttRes = await fetch(`${CONFIG.API_URL}/api/job`, {
@@ -401,7 +404,7 @@ async function startSystem() {
             throw new Error('MQTT Forwarder could not be started');
         }
 
-        statusEl.textContent = '✓ System running (GPS + MQTT)';
+        statusEl.textContent = 'System running (GPS + MQTT)';
         btn.disabled = false;
         systemRunning = true;
         updateButtonVisibility();
@@ -450,7 +453,7 @@ async function stopSystem() {
             throw new Error('MQTT Forwarder could not be stopped');
         }
 
-        statusEl.textContent = '✓ MQTT stopped. Stopping GPS Reader...';
+        statusEl.textContent = 'MQTT stopped. Stopping GPS Reader...';
 
         // Step 2: Stop GPS Reader
         const gpsRes = await fetch(`${CONFIG.API_URL}/api/job`, {
@@ -471,14 +474,14 @@ async function stopSystem() {
         const gpsJobId = gpsData.job_id;
 
         // Wait for GPS Stop to finish
-        statusEl.textContent = 'GPS Pi is working...';
+        statusEl.textContent = 'GPS Reader stopping...';
         const gpsStopped = await waitForJob(gpsJobId);
 
         if (!gpsStopped) {
             throw new Error('GPS Reader could not be stopped');
         }
 
-        statusEl.textContent = '✓ System stopped';
+        statusEl.textContent = 'System stopped';
         btn.disabled = false;
         systemRunning = false;
         updateButtonVisibility();
@@ -539,6 +542,14 @@ async function waitForJob(jobId) {
     });
 }
 
+// Parse timestamp (number or string) to epoch ms, or null if invalid
+function toMs(ts) {
+    if (ts === null || ts === undefined) return null;
+    const parsed = typeof ts === 'string' ? parseInt(ts, 10) : ts;
+    const date = new Date(parsed);
+    return isNaN(date.getTime()) ? null : date.getTime();
+}
+
 // Historie laden
 async function loadHistory() {
     try {
@@ -575,7 +586,6 @@ async function loadHistory() {
             lastPosition = latest;
             updateUI(latest);
 
-            // Online/Offline anhand Alter des Signals
             if (latest.ts) {
                 let tsValue = latest.ts;
                 if (typeof tsValue === 'string') {
@@ -611,16 +621,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial button visibility
     updateButtonVisibility();
 
-    // Regelmässige Updates
+    // Regelmaessige Updates
     setInterval(updatePosition, CONFIG.UPDATE_INTERVAL);
 });
-
-
-
-
-
-
-
-
-
-
