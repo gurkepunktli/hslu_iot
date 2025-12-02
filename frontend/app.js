@@ -672,8 +672,8 @@ async function waitForJob(jobId, timeoutSeconds = 30) {
 function toMs(ts) {
     if (ts === null || ts === undefined) return null;
     const parsed = typeof ts === 'string' ? parseInt(ts, 10) : ts;
-    const date = new Date(parsed);
-    return isNaN(date.getTime()) ? null : date.getTime();
+    // Timestamp is already in milliseconds, return directly
+    return isNaN(parsed) ? null : parsed;
 }
 
 function ensureMarker(lat, lon, stolenFlag) {
@@ -798,11 +798,40 @@ function startUpdateCountdown() {
     }, stepDuration);
 }
 
+// Check if system is running based on fresh GPS data
+async function checkSystemStatus() {
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/api/position?device=${CONFIG.DEVICE_ID}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const lastUpdateTs = data.last_update_ts || data.ts;
+
+        if (lastUpdateTs) {
+            const now = Date.now();
+            const lastUpdateMs = typeof lastUpdateTs === 'string' ? parseInt(lastUpdateTs, 10) : lastUpdateTs;
+            const ageSeconds = (now - lastUpdateMs) / 1000;
+
+            // If last update is less than 30 seconds old, system is likely running
+            if (ageSeconds < 30) {
+                systemRunning = true;
+                updateButtonVisibility();
+                setSystemStatus('✓ System running (GPS + MQTT)', 'ok');
+            }
+        }
+    } catch (err) {
+        console.error('Failed to check system status:', err);
+    }
+}
+
 // App starten
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
     loadHistory();
     updatePosition();
+
+    // Check if system is already running
+    checkSystemStatus();
 
     // Initial button visibility
     updateButtonVisibility();
