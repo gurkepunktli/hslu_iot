@@ -1,13 +1,18 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bike Tracker</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.js"></script>
     <style>
         #map { height: 100vh; width: 100%; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
         .badge-dot {
             width: 14px; height: 14px; border-radius: 50%; background: #94a3b8;
         }
@@ -15,39 +20,25 @@
         .badge-dot.offline { background: #f97316; box-shadow: 0 0 0 8px rgba(249,115,22,0.18); }
         .badge-dot.nofix { background: #f59e0b; box-shadow: 0 0 0 8px rgba(245,158,11,0.18); }
         .badge-dot.alert { background: #ef4444; box-shadow: 0 0 0 8px rgba(239,68,68,0.25); animation: pulse-red 1s infinite; }
-
         .lamp .dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; }
         .lamp.online .dot { background: #22c55e; box-shadow: 0 0 0 6px rgba(34,197,94,0.15); }
         .lamp.offline .dot { background: #ef4444; box-shadow: 0 0 0 6px rgba(239,68,68,0.15); }
         .lamp.nofix .dot { background: #f59e0b; box-shadow: 0 0 0 6px rgba(245,158,11,0.15); }
-
         .bike-icon { font-size: 42px; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
         .bike-icon.stolen { animation: shake 0.5s infinite; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
-
-        .loading {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: white; padding: 20px 30px; border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 1002; text-align: center;
-        }
+        .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 1002; text-align: center; }
         .loading.hidden { display: none; }
         .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        .stolen-banner {
-            display: none; position: absolute; top: 0; left: 0; right: 0;
-            background: linear-gradient(90deg, #b91c1c, #ef4444);
-            color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; z-index: 1001;
-            animation: flash 1s infinite;
-        }
+        .stolen-banner { display: none; position: absolute; top: 0; left: 0; right: 0; background: linear-gradient(90deg, #b91c1c, #ef4444); color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; z-index: 1001; animation: flash 1s infinite; }
         .stolen-banner.active { display: block; }
-
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes pulse-red { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.2); } }
         @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-900">
+<body class="bg-base-200 text-slate-900">
     <div class="loading" id="loading">
         <div class="spinner"></div>
         <div>Loading position...</div>
@@ -59,59 +50,69 @@
     
     <div id="map"></div>
     
-    <div class="absolute top-4 right-4 z-[1000] w-[360px] max-w-[92vw]">
-        <div class="rounded-3xl border border-white/60 bg-white/90 backdrop-blur px-5 py-5 shadow-2xl space-y-4">
-            <h2 class="text-lg font-extrabold text-slate-900">Bike Tracker</h2>
-
-            <div class="flex items-center justify-between rounded-2xl bg-gradient-to-r from-indigo-700 to-blue-600 text-white px-4 py-3 shadow-lg">
-                <div>
-                    <div class="text-base font-bold" id="statusText">Connecting...</div>
-                    <div class="text-xs opacity-85" id="statusSub">Waiting for first signal</div>
-                </div>
-                <div class="badge-dot" id="statusDot"></div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div class="lamp rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm flex flex-col gap-1" id="lampConnection">
-                    <div class="text-[11px] uppercase tracking-wide font-bold text-slate-500">Connection</div>
-                    <div class="value">
-                        <span class="dot"></span>
-                        <span id="lampConnectionText">--</span>
+    <div class="absolute top-4 right-4 z-[1000] w-[380px] max-w-[94vw]">
+        <div class="card border border-white/70 bg-white/90 shadow-2xl backdrop-blur">
+            <div class="card-body gap-4">
+                <div class="flex items-start justify-between">
+                    <h2 class="card-title text-lg font-extrabold text-slate-900">Bike Tracker</h2>
+                    <div class="badge badge-neutral gap-2 bg-slate-100 text-slate-600 border-none">
+                        <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                        HS25
                     </div>
                 </div>
-                <div class="lamp rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm flex flex-col gap-1" id="lampGps">
-                    <div class="text-[11px] uppercase tracking-wide font-bold text-slate-500">GPS</div>
-                    <div class="value">
-                        <span class="dot"></span>
-                        <span id="lampGpsText">--</span>
+
+                <div class="flex items-center justify-between rounded-2xl bg-gradient-to-r from-indigo-700 to-blue-600 text-white px-4 py-3 shadow-lg">
+                    <div>
+                        <div class="text-base font-bold" id="statusText">Connecting...</div>
+                        <div class="text-xs opacity-85" id="statusSub">Waiting for first signal</div>
+                    </div>
+                    <div class="badge-dot" id="statusDot"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="lamp rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm flex flex-col gap-1" id="lampConnection">
+                        <div class="text-[11px] uppercase tracking-wide font-bold text-slate-500">Connection</div>
+                        <div class="value flex items-start gap-2 font-bold text-slate-900 text-sm leading-5">
+                            <span class="dot"></span>
+                            <span id="lampConnectionText">--</span>
+                        </div>
+                    </div>
+                    <div class="lamp rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm flex flex-col gap-1" id="lampGps">
+                        <div class="text-[11px] uppercase tracking-wide font-bold text-slate-500">GPS</div>
+                        <div class="value flex items-start gap-2 font-bold text-slate-900 text-sm leading-5">
+                            <span class="dot"></span>
+                            <span id="lampGpsText">--</span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm space-y-2">
-                <div class="flex justify-between text-sm text-slate-500"><span>Speed</span><span class="font-semibold text-slate-900" id="speed">-- km/h</span></div>
-                <div class="flex justify-between text-sm text-slate-500"><span>Course</span><span class="font-semibold text-slate-900" id="course">--°</span></div>
-                <div class="flex justify-between text-sm text-slate-500"><span>Last update</span><span class="font-semibold text-slate-900" id="lastUpdate">--:--:--</span></div>
-                <div class="flex justify-between text-sm text-slate-500"><span>Last GPS fix</span><span class="font-semibold text-slate-900" id="lastFix">--:--:--</span></div>
-                <div class="flex justify-between text-sm text-slate-500"><span>Coordinates</span><span class="font-semibold text-slate-900" id="coords">--, --</span></div>
-            </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm space-y-2">
+                    <div class="flex justify-between text-sm text-slate-500"><span>Speed</span><span class="font-semibold text-slate-900" id="speed">-- km/h</span></div>
+                    <div class="flex justify-between text-sm text-slate-500"><span>Course</span><span class="font-semibold text-slate-900" id="course">--°</span></div>
+                    <div class="flex justify-between text-sm text-slate-500"><span>Last update</span><span class="font-semibold text-slate-900" id="lastUpdate">--:--:--</span></div>
+                    <div class="flex justify-between text-sm text-slate-500"><span>Last GPS fix</span><span class="font-semibold text-slate-900" id="lastFix">--:--:--</span></div>
+                    <div class="flex justify-between text-sm text-slate-500"><span>Coordinates</span><span class="font-semibold text-slate-900" id="coords">--, --</span></div>
+                </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <button class="btn-control start" id="btnStartSystem" onclick="startSystem()">
-                    <span class="dot"></span>
-                    <span>Start System</span>
+                <div class="grid grid-cols-2 gap-3">
+                    <button class="btn btn-outline btn-primary w-full" id="btnStartSystem" onclick="startSystem()">
+                        <span class="text-lg">▶</span>
+                        <span class="font-semibold">Start System</span>
+                    </button>
+                    <button class="btn btn-outline btn-error w-full hidden" id="btnStopSystem" onclick="stopSystem()">
+                        <span class="text-lg">■</span>
+                        <span class="font-semibold">Stop System</span>
+                    </button>
+                </div>
+
+                <div class="text-center">
+                    <div class="badge badge-lg w-full justify-center border border-slate-200 bg-slate-50 text-slate-600" id="systemStatus">System idle</div>
+                </div>
+
+                <button class="btn btn-error btn-block" id="btnStolen" onclick="toggleStolen()">
+                    Report as stolen
                 </button>
-                <button class="btn-control stop hidden" id="btnStopSystem" onclick="stopSystem()">
-                    <span class="dot"></span>
-                    <span>Stop System</span>
-                </button>
             </div>
-
-            <div class="system-status muted" id="systemStatus">System idle</div>
-
-            <button class="btn-stolen report" id="btnStolen" onclick="toggleStolen()">
-                Report as stolen
-            </button>
         </div>
     </div>
 
