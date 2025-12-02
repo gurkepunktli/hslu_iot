@@ -152,21 +152,40 @@ async function updatePosition() {
         const updateFresh = !!lastUpdateMs && now - lastUpdateMs <= CONFIG.STALE_UPDATE_MS;
         const fixFresh = !!lastFixMs && now - lastFixMs <= CONFIG.STALE_FIX_MS;
 
+        // Debug logging
+        console.log('DEBUG updatePosition:', {
+            now,
+            lastUpdateTs,
+            lastUpdateMs,
+            lastFixMs,
+            updateFresh,
+            fixFresh,
+            updateAge: lastUpdateMs ? (now - lastUpdateMs) / 1000 : null,
+            fixAge: lastFixMs ? (now - lastFixMs) / 1000 : null,
+            staleUpdateMs: CONFIG.STALE_UPDATE_MS,
+            staleFixMs: CONFIG.STALE_FIX_MS
+        });
+
         // Connection but no valid GPS fix
         if (!hasValidCoords || isZeroCoords) {
+            console.log('DEBUG: No valid coords');
             setNoFixStatus('No GPS fix available');
             return;
         }
 
         if (!updateFresh) {
+            console.log('DEBUG: Update not fresh');
             setOfflineStatus('Signal too old');
             return;
         }
 
         if (!fixFresh) {
+            console.log('DEBUG: Fix not fresh');
             setNoFixStatus('GPS fix too old');
             return;
         }
+
+        console.log('DEBUG: All checks passed, setting online');
 
         // Valid GPS data
         data.lat = lat;
