@@ -422,15 +422,19 @@ async function startSystem() {
         const gpsData = await gpsRes.json();
         const gpsJobId = gpsData.job_id;
 
-        // Wait for GPS Reader to finish
-        setSystemStatus('GPS Reader running...', 'warn');
-        const gpsReady = await waitForJob(gpsJobId);
+        // Wait for GPS Reader to finish (30s timeout)
+        setSystemStatus('GPS Reader starting... (timeout: 30s)', 'warn');
+        const gpsResult = await waitForJob(gpsJobId, 30);
 
-        if (!gpsReady) {
-            throw new Error('GPS Reader could not be started');
+        if (!gpsResult.success) {
+            if (gpsResult.error === 'timeout') {
+                throw new Error('GPS Pi unreachable or not responding (timeout after 30s)');
+            } else {
+                throw new Error(`GPS Reader failed: ${gpsResult.message}`);
+            }
         }
 
-        setSystemStatus('GPS Reader ok. Starting MQTT Forwarder...', 'warn');
+        setSystemStatus('✓ GPS Reader started. Starting MQTT Forwarder...', 'warn');
 
         // Step 2: Start MQTT Forwarder
         const mqttRes = await fetch(`${CONFIG.API_URL}/api/job`, {
@@ -450,15 +454,19 @@ async function startSystem() {
         const mqttData = await mqttRes.json();
         const mqttJobId = mqttData.job_id;
 
-        // Wait for MQTT Forwarder to finish
-        setSystemStatus('Gateway is working...', 'warn');
-        const mqttReady = await waitForJob(mqttJobId);
+        // Wait for MQTT Forwarder to finish (30s timeout)
+        setSystemStatus('MQTT Forwarder starting... (timeout: 30s)', 'warn');
+        const mqttResult = await waitForJob(mqttJobId, 30);
 
-        if (!mqttReady) {
-            throw new Error('MQTT Forwarder could not be started');
+        if (!mqttResult.success) {
+            if (mqttResult.error === 'timeout') {
+                throw new Error('Gateway unreachable or not responding (timeout after 30s)');
+            } else {
+                throw new Error(`MQTT Forwarder failed: ${mqttResult.message}`);
+            }
         }
 
-        setSystemStatus('System running (GPS + MQTT)', 'ok');
+        setSystemStatus('✓ System running (GPS + MQTT)', 'ok');
         btn.disabled = false;
         systemRunning = true;
         updateButtonVisibility();
@@ -498,15 +506,19 @@ async function stopSystem() {
         const mqttData = await mqttRes.json();
         const mqttJobId = mqttData.job_id;
 
-        // Wait for MQTT Stop to finish
-        setSystemStatus('Gateway is working...', 'warn');
-        const mqttStopped = await waitForJob(mqttJobId);
+        // Wait for MQTT Stop to finish (20s timeout)
+        setSystemStatus('Stopping MQTT Forwarder... (timeout: 20s)', 'warn');
+        const mqttResult = await waitForJob(mqttJobId, 20);
 
-        if (!mqttStopped) {
-            throw new Error('MQTT Forwarder could not be stopped');
+        if (!mqttResult.success) {
+            if (mqttResult.error === 'timeout') {
+                throw new Error('Gateway unreachable (timeout after 20s)');
+            } else {
+                throw new Error(`MQTT stop failed: ${mqttResult.message}`);
+            }
         }
 
-        setSystemStatus('MQTT stopped. Stopping GPS Reader...', 'warn');
+        setSystemStatus('✓ MQTT stopped. Stopping GPS Reader...', 'warn');
 
         // Step 2: Stop GPS Reader
         const gpsRes = await fetch(`${CONFIG.API_URL}/api/job`, {
@@ -526,15 +538,19 @@ async function stopSystem() {
         const gpsData = await gpsRes.json();
         const gpsJobId = gpsData.job_id;
 
-        // Wait for GPS Stop to finish
-        setSystemStatus('GPS Reader stopping...', 'warn');
-        const gpsStopped = await waitForJob(gpsJobId);
+        // Wait for GPS Stop to finish (20s timeout)
+        setSystemStatus('Stopping GPS Reader... (timeout: 20s)', 'warn');
+        const gpsResult = await waitForJob(gpsJobId, 20);
 
-        if (!gpsStopped) {
-            throw new Error('GPS Reader could not be stopped');
+        if (!gpsResult.success) {
+            if (gpsResult.error === 'timeout') {
+                throw new Error('GPS Pi unreachable (timeout after 20s)');
+            } else {
+                throw new Error(`GPS stop failed: ${gpsResult.message}`);
+            }
         }
 
-        setSystemStatus('System stopped', 'ok');
+        setSystemStatus('✓ System stopped', 'ok');
         btn.disabled = false;
         systemRunning = false;
         updateButtonVisibility();
@@ -547,23 +563,25 @@ async function stopSystem() {
 }
 
 // Hilfsfunktion: Warte auf Job-Completion
-async function waitForJob(jobId) {
+async function waitForJob(jobId, timeoutSeconds = 30) {
     return new Promise((resolve) => {
         let attempts = 0;
-        const maxAttempts = 30; // 30 * 2s = 60s timeout
+        const maxAttempts = Math.ceil(timeoutSeconds * 1000 / CONFIG.JOB_STATUS_POLL_MS);
 
         const pollTimer = setInterval(async () => {
             attempts++;
 
             if (attempts > maxAttempts) {
                 clearInterval(pollTimer);
-                resolve(false);
+                console.error(`Job ${jobId} timed out after ${timeoutSeconds}s`);
+                resolve({ success: false, error: 'timeout', message: `Operation timed out after ${timeoutSeconds} seconds` });
                 return;
             }
 
             try {
                 const res = await fetch(`${CONFIG.API_URL}/api/job/status?job_id=${jobId}`);
                 if (!res.ok) {
+                    // Network error, keep trying
                     return;
                 }
 
@@ -572,24 +590,31 @@ async function waitForJob(jobId) {
 
                 if (!job) {
                     clearInterval(pollTimer);
-                    resolve(false);
+                    resolve({ success: false, error: 'not_found', message: 'Job not found' });
                     return;
                 }
 
                 if (job.status === 'done') {
                     clearInterval(pollTimer);
-                    resolve(true);
+                    resolve({ success: true, output: job.output });
                     return;
                 }
 
-                if (['failed', 'timeout'].includes(job.status)) {
+                if (job.status === 'failed') {
                     clearInterval(pollTimer);
-                    resolve(false);
+                    resolve({ success: false, error: 'failed', message: job.output || 'Job failed' });
+                    return;
+                }
+
+                if (job.status === 'timeout') {
+                    clearInterval(pollTimer);
+                    resolve({ success: false, error: 'job_timeout', message: 'Job execution timed out on device' });
                     return;
                 }
 
             } catch (err) {
                 console.error('Job poll error:', err);
+                // Network error, keep trying until maxAttempts
             }
         }, CONFIG.JOB_STATUS_POLL_MS);
     });
