@@ -283,11 +283,22 @@ function setMainStatus(state, title, subtitle) {
     const text = document.getElementById('statusText');
     const sub = document.getElementById('statusSub');
     const dot = document.getElementById('statusDot');
+    const liveIndicator = document.getElementById('liveIndicator');
+
     if (text) text.textContent = title || '';
     if (sub) sub.textContent = subtitle || '';
     if (dot) {
         const liveClass = state === 'online' ? 'live' : '';
         dot.className = `badge-dot ${state || ''} ${liveClass}`.trim();
+    }
+
+    // Show pulse ring only when truly online (fresh updates)
+    if (liveIndicator) {
+        if (state === 'online') {
+            liveIndicator.classList.remove('hidden');
+        } else {
+            liveIndicator.classList.add('hidden');
+        }
     }
 }
 

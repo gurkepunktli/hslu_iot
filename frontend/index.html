@@ -47,27 +47,26 @@
         .btn-error:hover { filter: brightness(0.95); }
         .btn-ghost { background: #f8fafc; color: #0f172a; border-color: #e2e8f0; }
         .btn-ghost:hover { background: #e2e8f0; }
-        /* Auto-Update Spinner */
+        /* Live Indicator Pulse Ring */
         .pulse-ring {
-            position: relative;
-            width: 20px;
-            height: 20px;
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
         }
         .pulse-ring::before, .pulse-ring::after {
             content: '';
             position: absolute;
-            inset: 0;
+            inset: -3px;
             border-radius: 50%;
-            border: 3px solid #2563eb;
-            opacity: 0.6;
+            border: 2px solid rgba(255, 255, 255, 0.9);
             animation: ring 1.6s infinite ease-out;
         }
         .pulse-ring::after {
-            animation-delay: 0.3s;
+            animation-delay: 0.4s;
         }
         @keyframes ring {
-            0% { transform: scale(0.6); opacity: 0.6; }
-            100% { transform: scale(1.5); opacity: 0; }
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(2); opacity: 0; }
         }
     </style>
 </head>
@@ -95,17 +94,13 @@
                     <div class="text-lg font-bold" id="statusText">Connecting...</div>
                     <div class="text-xs opacity-85" id="statusSub">Waiting for first signal</div>
                 </div>
-                <div class="badge-dot" id="statusDot"></div>
+                <div class="relative">
+                    <div class="badge-dot" id="statusDot"></div>
+                    <div class="pulse-ring absolute inset-0 hidden" id="liveIndicator"></div>
+                </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm space-y-3">
-                <div class="flex items-center justify-between text-sm text-slate-600">
-                    <span>Auto-Update</span>
-                    <div class="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                        <div class="pulse-ring"></div>
-                        <span>Live</span>
-                    </div>
-                </div>
+            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
                 <div class="grid grid-cols-2 text-sm text-slate-500 gap-y-2">
                     <span>Speed</span><span class="font-semibold text-slate-900 text-right" id="speed">-- km/h</span>
                     <span>Course</span><span class="font-semibold text-slate-900 text-right" id="course">--°</span>
