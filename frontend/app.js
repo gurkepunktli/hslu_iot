@@ -447,6 +447,9 @@ async function startSystem() {
     if (!btn) return;
 
     btn.disabled = true;
+    btn.innerHTML = `<svg class="animate-spin h-5 w-5 mx-auto" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="60" stroke-linecap="round"></circle>
+    </svg>`;
 
     try {
         // Step 1: Start GPS Reader
@@ -515,6 +518,7 @@ async function startSystem() {
 
         setSystemStatus('✓ System running (GPS + MQTT)', 'ok');
         btn.disabled = false;
+        btn.textContent = 'Start system';
         systemRunning = true;
         updateButtonVisibility();
 
@@ -522,6 +526,7 @@ async function startSystem() {
         console.error('System start failed:', err);
         setSystemStatus(`Error: ${err.message}`, 'alert');
         btn.disabled = false;
+        btn.textContent = 'Start system';
     }
 }
 
@@ -531,6 +536,9 @@ async function stopSystem() {
     if (!btn) return;
 
     btn.disabled = true;
+    btn.innerHTML = `<svg class="animate-spin h-5 w-5 mx-auto" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="60" stroke-linecap="round"></circle>
+    </svg>`;
 
     try {
         // Step 1: Stop MQTT Forwarder
@@ -599,6 +607,7 @@ async function stopSystem() {
 
         setSystemStatus('✓ System stopped', 'ok');
         btn.disabled = false;
+        btn.textContent = 'Stop system';
         systemRunning = false;
         updateButtonVisibility();
 
@@ -606,6 +615,7 @@ async function stopSystem() {
         console.error('System stop failed:', err);
         setSystemStatus(`Error: ${err.message}`, 'alert');
         btn.disabled = false;
+        btn.textContent = 'Stop system';
     }
 }
 
