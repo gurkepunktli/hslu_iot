@@ -285,7 +285,10 @@ function setMainStatus(state, title, subtitle) {
     const dot = document.getElementById('statusDot');
     if (text) text.textContent = title || '';
     if (sub) sub.textContent = subtitle || '';
-    if (dot) dot.className = `badge-dot ${state || ''}`.trim();
+    if (dot) {
+        const liveClass = state === 'online' ? 'live' : '';
+        dot.className = `badge-dot ${state || ''} ${liveClass}`.trim();
+    }
 }
 
 // Status-Lampe setzen
