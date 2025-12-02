@@ -24,6 +24,7 @@ sudo tee /etc/systemd/system/mqtt-forwarder.service > /dev/null <<EOF
 [Unit]
 Description=MQTT Forwarder - Local to AWS IoT Core Bridge
 After=network.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -34,9 +35,6 @@ Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-
-# Restart on failure
-StartLimitIntervalSec=0
 
 [Install]
 WantedBy=multi-user.target
