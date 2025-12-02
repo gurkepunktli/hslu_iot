@@ -71,8 +71,8 @@
         /* Update Progress Circle */
         .update-circle {
             position: relative;
-            width: 32px;
-            height: 32px;
+            width: 24px;
+            height: 24px;
         }
         .update-circle svg {
             transform: rotate(-90deg);
@@ -81,24 +81,17 @@
         }
         .update-circle circle {
             fill: none;
-            stroke-width: 3;
+            stroke-width: 2.5;
             stroke-linecap: round;
         }
         .update-circle .bg {
-            stroke: rgba(255, 255, 255, 0.2);
+            stroke: rgba(255, 255, 255, 0.25);
         }
         .update-circle .progress {
-            stroke: rgba(255, 255, 255, 0.9);
-            stroke-dasharray: 75.4;
-            stroke-dashoffset: 75.4;
+            stroke: rgba(255, 255, 255, 1);
+            stroke-dasharray: 62.83;
+            stroke-dashoffset: 62.83;
             transition: stroke-dashoffset 0.1s linear;
-        }
-        .update-circle .icon {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 14px;
         }
     </style>
 </head>
@@ -126,13 +119,12 @@
                     <div class="text-lg font-bold" id="statusText">Connecting...</div>
                     <div class="text-xs opacity-85" id="statusSub">Waiting for first signal</div>
                 </div>
-                <div class="flex items-center gap-3">
-                    <div class="update-circle" id="updateCircle">
-                        <svg viewBox="0 0 28 28">
-                            <circle class="bg" cx="14" cy="14" r="12"/>
-                            <circle class="progress" cx="14" cy="14" r="12" id="updateProgress"/>
+                <div class="flex items-center gap-4">
+                    <div class="update-circle opacity-80" id="updateCircle" title="Auto-refresh countdown">
+                        <svg viewBox="0 0 24 24">
+                            <circle class="bg" cx="12" cy="12" r="10"/>
+                            <circle class="progress" cx="12" cy="12" r="10" id="updateProgress"/>
                         </svg>
-                        <div class="icon">⟳</div>
                     </div>
                     <div class="relative">
                         <div class="badge-dot" id="statusDot"></div>
@@ -162,7 +154,17 @@
                         <span class="font-semibold">Stop System</span>
                     </button>
                 </div>
-                <div class="rounded-xl border-2 border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 text-center shadow-sm" id="systemStatus">System idle</div>
+
+                <div class="rounded-2xl border-2 border-slate-300 bg-gradient-to-br from-slate-50 to-white shadow-inner p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-600">System Messages</span>
+                    </div>
+                    <div class="rounded-xl border-2 border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 text-center shadow-sm" id="systemStatus">System idle</div>
+                </div>
+
                 <button class="btn btn-error w-full" id="btnStolen" onclick="toggleStolen()">
                     Report as stolen
                 </button>

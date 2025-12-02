@@ -105,17 +105,17 @@ async function updatePosition() {
 
         // Connection but no valid GPS fix
         if (!hasValidCoords || isZeroCoords) {
-            setNoFixStatus('Kein GPS-Fix verfuegbar');
+            setNoFixStatus('No GPS fix available');
             return;
         }
 
         if (!updateFresh) {
-            setOfflineStatus('Signal zu alt');
+            setOfflineStatus('Signal too old');
             return;
         }
 
         if (!fixFresh) {
-            setNoFixStatus('GPS-Fix zu alt');
+            setNoFixStatus('GPS fix too old');
             return;
         }
 
@@ -169,11 +169,11 @@ async function updatePosition() {
             updateStolenUI(isStolen);
         }
 
-        // Status setzen je nach Freshness
+        // Set status based on freshness
         if (!updateFresh) {
-            setOfflineStatus('Signal zu alt');
+            setOfflineStatus('Signal too old');
         } else if (!fixFresh) {
-            setNoFixStatus('GPS-Fix zu alt');
+            setNoFixStatus('GPS fix too old');
         } else {
             setOnlineStatus();
         }
@@ -620,12 +620,12 @@ async function loadHistory() {
 
         if (!Array.isArray(data) || data.length === 0) return;
 
-        // Neuester Punkt fuer das UI merken (kann invalid sein)
+        // Remember newest point for UI (may be invalid)
         const latest = data[0];
-        // Letzter gueltiger Fix (auch aelter)
+        // Last valid fix (may be older)
         const latestValidFix = findLatestValidFix(data);
 
-        // Punkte in chronologischer Reihenfolge fuer den Track
+        // Points in chronological order for the track
         data.slice().reverse().forEach(p => {
             if (isValidFix(p)) {
                 trackPoints.push([p.lat, p.lon]);
@@ -642,7 +642,7 @@ async function loadHistory() {
             map.fitBounds(trackLine.getBounds(), { padding: [50, 50] });
         }
 
-        // Fallback: letzten Stand im Panel anzeigen (gueltiger Fix bevorzugt)
+        // Fallback: show last state in panel (prefer valid fix)
         const displayPoint = latestValidFix || (isValidFix(latest) ? latest : null);
         if (displayPoint) {
             lastPosition = displayPoint;
@@ -683,7 +683,7 @@ function startUpdateCountdown() {
     const progressCircle = document.getElementById('updateProgress');
     if (!progressCircle) return;
 
-    const circumference = 2 * Math.PI * 12; // radius = 12
+    const circumference = 2 * Math.PI * 10; // radius = 10
     const duration = CONFIG.UPDATE_INTERVAL;
     const steps = 30; // 30 steps for smooth animation
     const stepDuration = duration / steps;
@@ -722,14 +722,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start update countdown animation
     startUpdateCountdown();
 
-    // Regelmaessige Updates
+    // Regular updates
     setInterval(() => {
         updatePosition();
         startUpdateCountdown(); // Restart countdown on each update
     }, CONFIG.UPDATE_INTERVAL);
 });
 
-// Normalisiert Koordinaten/Nummern aus API
+// Normalize coordinates/numbers from API
 function normalizePoint(p) {
     if (!p || typeof p !== 'object') return {};
     const lat = p.lat != null ? parseFloat(p.lat) : NaN;
