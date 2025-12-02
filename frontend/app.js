@@ -61,23 +61,29 @@ function createHistoryMarker(lat, lon, timestamp) {
     const timeStr = date.toLocaleTimeString('en-GB');
 
     const circleMarker = L.circleMarker([lat, lon], {
-        radius: 6,
+        radius: 7,
         fillColor: '#3b82f6',
         color: '#fff',
-        weight: 2,
+        weight: 2.5,
         opacity: 1,
-        fillOpacity: 0.8
+        fillOpacity: 0.9,
+        interactive: true,
+        pane: 'markerPane' // Draw above other layers
     });
 
     circleMarker.bindPopup(`
-        <div style="font-family: 'Inter', sans-serif; font-size: 13px;">
+        <div style="font-family: 'Inter', sans-serif; font-size: 13px; padding: 4px;">
             <strong style="font-size: 14px; color: #0f172a;">GPS Fix</strong><br/>
             <span style="color: #64748b;">Date:</span> <strong>${dateStr}</strong><br/>
             <span style="color: #64748b;">Time:</span> <strong>${timeStr}</strong><br/>
             <span style="color: #64748b;">Coordinates:</span><br/>
             <strong>${lat.toFixed(6)}, ${lon.toFixed(6)}</strong>
         </div>
-    `);
+    `, {
+        closeButton: true,
+        autoClose: true,
+        closeOnClick: false
+    });
 
     return circleMarker;
 }
@@ -194,7 +200,9 @@ async function updatePosition() {
             trackLine = L.polyline(trackPoints, {
                 color: trackColor,
                 weight: 4,
-                opacity: 0.7
+                opacity: 0.7,
+                interactive: false,
+                pane: 'overlayPane' // Draw below markers
             }).addTo(map);
         }
 
@@ -717,7 +725,9 @@ async function loadHistory() {
             trackLine = L.polyline(trackPoints, {
                 color: CONFIG.TRACK_COLOR_NORMAL,
                 weight: 4,
-                opacity: 0.7
+                opacity: 0.7,
+                interactive: false,
+                pane: 'overlayPane' // Draw below markers
             }).addTo(map);
 
             map.fitBounds(trackLine.getBounds(), { padding: [50, 50] });
