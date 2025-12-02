@@ -62,16 +62,10 @@
     
     <div class="absolute top-4 right-4 z-[1000] w-[400px] max-w-[94vw]">
         <div class="glass rounded-3xl border border-white/70 shadow-2xl p-6 space-y-5">
-            <div class="flex items-start justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-[0.2em] text-slate-500 font-semibold">Bike Tracker</p>
                     <h2 class="text-2xl font-extrabold text-slate-900 leading-tight mt-1">Live Status</h2>
                 </div>
-                <div class="flex items-center gap-2 text-slate-600 text-sm">
-                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                    HS25
-                </div>
-            </div>
 
             <div class="flex items-center justify-between rounded-2xl bg-gradient-to-r from-indigo-700 to-blue-600 text-white px-5 py-4 shadow-lg">
                 <div>
@@ -79,23 +73,6 @@
                     <div class="text-xs opacity-85" id="statusSub">Waiting for first signal</div>
                 </div>
                 <div class="badge-dot" id="statusDot"></div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div class="lamp rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm flex flex-col gap-1" id="lampConnection">
-                    <div class="text-[11px] uppercase tracking-wide font-bold text-slate-500">Connection</div>
-                    <div class="flex items-start gap-2 font-bold text-slate-900 text-sm leading-5">
-                        <span class="dot"></span>
-                        <span id="lampConnectionText">--</span>
-                    </div>
-                </div>
-                <div class="lamp rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm flex flex-col gap-1" id="lampGps">
-                    <div class="text-[11px] uppercase tracking-wide font-bold text-slate-500">GPS</div>
-                    <div class="flex items-start gap-2 font-bold text-slate-900 text-sm leading-5">
-                        <span class="dot"></span>
-                        <span id="lampGpsText">--</span>
-                    </div>
-                </div>
             </div>
 
             <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm space-y-3">
