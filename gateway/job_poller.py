@@ -104,6 +104,11 @@ def execute_job(job):
             result = execute_mqtt_forwarder(params)
             status = "done"
             output = result
+        elif job_type == "stop_mqtt_forward":
+            # Stop MQTT forwarder script
+            result = stop_mqtt_forwarder(params)
+            status = "done"
+            output = result
         else:
             # Unknown job type
             status = "failed"
@@ -182,6 +187,32 @@ def execute_mqtt_forwarder(params):
     print(f"[{datetime.now()}] MQTT forwarder started with PID: {pid}")
 
     return f"MQTT forwarder started successfully (PID: {pid})"
+
+
+def stop_mqtt_forwarder(params):
+    """Stop MQTT forwarder script"""
+    print(f"[{datetime.now()}] Stopping MQTT forwarder...")
+
+    try:
+        # Find and kill mqtt_forwarder.py process
+        result = subprocess.run(
+            ["pkill", "-f", "mqtt_forwarder.py"],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            print(f"[{datetime.now()}] MQTT forwarder stopped successfully")
+            return "MQTT forwarder stopped successfully"
+        elif result.returncode == 1:
+            print(f"[{datetime.now()}] No MQTT forwarder process found")
+            return "No MQTT forwarder process running"
+        else:
+            raise Exception(f"Failed to stop MQTT forwarder: {result.stderr}")
+
+    except Exception as e:
+        print(f"[{datetime.now()}] Error stopping MQTT forwarder: {e}")
+        raise
 
 
 def report_result(job_id, status, output, duration_ms):

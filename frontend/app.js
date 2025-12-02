@@ -400,6 +400,81 @@ async function startSystem() {
     }
 }
 
+// System komplett stoppen (MQTT Forwarder + GPS Reader)
+async function stopSystem() {
+    const btn = document.getElementById('btnStopSystem');
+    const statusEl = document.getElementById('systemStatus');
+    if (!btn || !statusEl) return;
+
+    btn.disabled = true;
+
+    try {
+        // Schritt 1: MQTT Forwarder stoppen
+        statusEl.textContent = 'Stoppe MQTT Forwarder...';
+
+        const mqttRes = await fetch(`${CONFIG.API_URL}/api/job`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'stop_mqtt_forward',
+                target: CONFIG.GATEWAY_TARGET,
+                params: {}
+            })
+        });
+
+        if (!mqttRes.ok) {
+            throw new Error(`MQTT Stop failed: HTTP ${mqttRes.status}`);
+        }
+
+        const mqttData = await mqttRes.json();
+        const mqttJobId = mqttData.job_id;
+
+        // Warte auf MQTT Stop fertig
+        statusEl.textContent = 'Gateway arbeitet...';
+        const mqttStopped = await waitForJob(mqttJobId);
+
+        if (!mqttStopped) {
+            throw new Error('MQTT Forwarder konnte nicht gestoppt werden');
+        }
+
+        statusEl.textContent = '✓ MQTT gestoppt. Stoppe GPS Reader...';
+
+        // Schritt 2: GPS Reader stoppen
+        const gpsRes = await fetch(`${CONFIG.API_URL}/api/job`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'stop_gps_reader',
+                target: CONFIG.GPS_PI_TARGET,
+                params: {}
+            })
+        });
+
+        if (!gpsRes.ok) {
+            throw new Error(`GPS Stop failed: HTTP ${gpsRes.status}`);
+        }
+
+        const gpsData = await gpsRes.json();
+        const gpsJobId = gpsData.job_id;
+
+        // Warte auf GPS Stop fertig
+        statusEl.textContent = 'GPS Pi arbeitet...';
+        const gpsStopped = await waitForJob(gpsJobId);
+
+        if (!gpsStopped) {
+            throw new Error('GPS Reader konnte nicht gestoppt werden');
+        }
+
+        statusEl.textContent = '✓ System gestoppt';
+        btn.disabled = false;
+
+    } catch (err) {
+        console.error('System stop failed:', err);
+        statusEl.textContent = `Fehler: ${err.message}`;
+        btn.disabled = false;
+    }
+}
+
 // Hilfsfunktion: Warte auf Job-Completion
 async function waitForJob(jobId) {
     return new Promise((resolve) => {
