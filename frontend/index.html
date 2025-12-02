@@ -295,6 +295,11 @@
         <button class="btn-center" onclick="centerMap()">
             Center on bike
         </button>
+
+        <button class="btn-center" id="btnGps" onclick="requestGpsFix()">
+            GPS fix anfordern
+        </button>
+        <div class="info-value" id="jobStatus" style="margin-top:6px; min-height:18px;">&nbsp;</div>
         
         <button class="btn-stolen report" id="btnStolen" onclick="toggleStolen()">
             Report as stolen

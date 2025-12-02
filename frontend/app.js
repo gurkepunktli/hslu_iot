@@ -6,6 +6,8 @@ let map, marker, trackLine;
 let isStolen = false;
 let lastPosition = null;
 const trackPoints = [];
+let currentJobId = null;
+let jobPollTimer = null;
 
 // Karte initialisieren
 function initMap() {
@@ -275,6 +277,108 @@ async function toggleStolen() {
 function centerMap() {
     if (lastPosition) {
         map.setView([lastPosition.lat, lastPosition.lon], 16);
+    }
+}
+
+// GPS-Job anstossen (Frontend-Button)
+async function requestGpsFix() {
+    const btn = document.getElementById('btnGps');
+    const statusEl = document.getElementById('jobStatus');
+    if (!btn || !statusEl) return;
+
+    btn.disabled = true;
+    statusEl.textContent = 'Job wird angelegt...';
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/api/job`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'gps_read',
+                target: CONFIG.GATEWAY_TARGET,
+                params: { device: CONFIG.DEVICE_ID }
+            })
+        });
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        currentJobId = data.job_id;
+
+        if (!currentJobId) {
+            throw new Error('job_id missing');
+        }
+
+        statusEl.textContent = 'Warte auf Gateway...';
+        jobPollTimer = setInterval(pollJobStatus, CONFIG.JOB_STATUS_POLL_MS);
+    } catch (err) {
+        console.error('Job start failed:', err);
+        statusEl.textContent = 'Fehler beim Job-Start';
+        btn.disabled = false;
+        currentJobId = null;
+        if (jobPollTimer) {
+            clearInterval(jobPollTimer);
+            jobPollTimer = null;
+        }
+    }
+}
+
+// Job-Status pollen
+async function pollJobStatus() {
+    if (!currentJobId) return;
+    const statusEl = document.getElementById('jobStatus');
+    const btn = document.getElementById('btnGps');
+    if (!statusEl || !btn) return;
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/api/job/status?job_id=${currentJobId}`);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        const job = data?.job;
+
+        if (!job) {
+            statusEl.textContent = 'Job nicht gefunden';
+            clearInterval(jobPollTimer);
+            jobPollTimer = null;
+            btn.disabled = false;
+            currentJobId = null;
+            return;
+        }
+
+        if (job.status === 'queued') {
+            statusEl.textContent = 'Gateway arbeitet...';
+            return;
+        }
+
+        if (job.status === 'done') {
+            statusEl.textContent = 'GPS aktualisiert';
+            clearInterval(jobPollTimer);
+            jobPollTimer = null;
+            btn.disabled = false;
+            currentJobId = null;
+            updatePosition(); // frische Position vom Backend holen
+            return;
+        }
+
+        if (['failed', 'timeout'].includes(job.status)) {
+            statusEl.textContent = `Job: ${job.status}`;
+            clearInterval(jobPollTimer);
+            jobPollTimer = null;
+            btn.disabled = false;
+            currentJobId = null;
+            return;
+        }
+    } catch (err) {
+        console.error('Status poll failed:', err);
+        statusEl.textContent = 'Status-Check fehlgeschlagen';
+        clearInterval(jobPollTimer);
+        jobPollTimer = null;
+        btn.disabled = false;
+        currentJobId = null;
     }
 }
 

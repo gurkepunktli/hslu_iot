@@ -4,7 +4,8 @@ compatibility_date = "2025-12-01"
 
 # KV namespace binding (replace with your namespace ID)
 kv_namespaces = [
-  { binding = "BIKE_STATUS", id = "74fd0ee15c1e4879a8d7ef5f1fba2810" }
+  { binding = "BIKE_STATUS", id = "74fd0ee15c1e4879a8d7ef5f1fba2810" },
+  { binding = "JOB_QUEUE", id = "0d5f6ca5f3f843958e60c05f882cd805" }
 ]
 
 [vars]

@@ -129,6 +129,128 @@ export default {
             return new Response(JSON.stringify({ stolen: false }), { headers: corsHeaders });
         }
 
+            // Route: POST /api/job - Job anlegen (Frontend-Button)
+            if (url.pathname === '/api/job' && request.method === 'POST') {
+                if (!env.JOB_QUEUE) {
+                    return new Response(
+                        JSON.stringify({ error: 'JOB_QUEUE not configured' }),
+                        { status: 500, headers: corsHeaders }
+                    );
+                }
+
+                const body = await request.json();
+                const { type = 'gps_read', target = 'gateway', params = {} } = body || {};
+
+                const jobId = crypto.randomUUID();
+                const job = {
+                    job_id: jobId,
+                    type,
+                    target,
+                    params,
+                    status: 'queued',
+                    created_at: Date.now()
+                };
+
+                await env.JOB_QUEUE.put(`job:${jobId}`, JSON.stringify(job), { expirationTtl: 3600 });
+                await env.JOB_QUEUE.put(`next:${target}`, jobId, { expirationTtl: 3600 });
+
+                return new Response(JSON.stringify({ job_id: jobId }), { headers: corsHeaders });
+            }
+
+            // Route: GET /api/job/poll - Gateway fragt nach Arbeit
+            if (url.pathname === '/api/job/poll' && request.method === 'GET') {
+                if (!env.JOB_QUEUE) {
+                    return new Response(
+                        JSON.stringify({ error: 'JOB_QUEUE not configured' }),
+                        { status: 500, headers: corsHeaders }
+                    );
+                }
+
+                const piId = url.searchParams.get('pi_id');
+                if (!piId) {
+                    return new Response(
+                        JSON.stringify({ error: 'Missing pi_id' }),
+                        { status: 400, headers: corsHeaders }
+                    );
+                }
+
+                const nextId = await env.JOB_QUEUE.get(`next:${piId}`);
+                if (!nextId) {
+                    return new Response(JSON.stringify({ job: null }), { headers: corsHeaders });
+                }
+
+                const jobRaw = await env.JOB_QUEUE.get(`job:${nextId}`);
+                // Job einmalig zustellen
+                await env.JOB_QUEUE.delete(`next:${piId}`);
+
+                return new Response(
+                    JSON.stringify({ job: jobRaw ? JSON.parse(jobRaw) : null }),
+                    { headers: corsHeaders }
+                );
+            }
+
+            // Route: POST /api/job/result - Gateway meldet Ergebnis
+            if (url.pathname === '/api/job/result' && request.method === 'POST') {
+                if (!env.JOB_QUEUE) {
+                    return new Response(
+                        JSON.stringify({ error: 'JOB_QUEUE not configured' }),
+                        { status: 500, headers: corsHeaders }
+                    );
+                }
+
+                const body = await request.json();
+                const { job_id, status, output = '', duration_ms = 0 } = body || {};
+
+                if (!job_id || !status) {
+                    return new Response(
+                        JSON.stringify({ error: 'Missing job_id or status' }),
+                        { status: 400, headers: corsHeaders }
+                    );
+                }
+
+                const jobRaw = await env.JOB_QUEUE.get(`job:${job_id}`);
+                if (!jobRaw) {
+                    return new Response(
+                        JSON.stringify({ error: 'Job not found' }),
+                        { status: 404, headers: corsHeaders }
+                    );
+                }
+
+                const job = JSON.parse(jobRaw);
+                job.status = status;
+                job.output = output;
+                job.duration_ms = duration_ms;
+                job.finished_at = Date.now();
+
+                await env.JOB_QUEUE.put(`job:${job_id}`, JSON.stringify(job), { expirationTtl: 86400 });
+
+                return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+            }
+
+            // Route: GET /api/job/status - Frontend fragt Status ab
+            if (url.pathname === '/api/job/status' && request.method === 'GET') {
+                if (!env.JOB_QUEUE) {
+                    return new Response(
+                        JSON.stringify({ error: 'JOB_QUEUE not configured' }),
+                        { status: 500, headers: corsHeaders }
+                    );
+                }
+
+                const jobId = url.searchParams.get('job_id');
+                if (!jobId) {
+                    return new Response(
+                        JSON.stringify({ error: 'Missing job_id' }),
+                        { status: 400, headers: corsHeaders }
+                    );
+                }
+
+                const jobRaw = await env.JOB_QUEUE.get(`job:${jobId}`);
+                return new Response(
+                    JSON.stringify({ job: jobRaw ? JSON.parse(jobRaw) : null }),
+                    { headers: corsHeaders }
+                );
+            }
+
             // 404 für unbekannte Routen
             return new Response(
                 JSON.stringify({ error: 'Not found' }), 
