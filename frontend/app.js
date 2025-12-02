@@ -87,6 +87,11 @@ async function updatePosition() {
 
         // No connection at all
         if (!hasConnection) {
+            if (lastGpsFix) {
+                updateLastFixTimestamp(lastGpsFix.ts);
+                updateUI(lastGpsFix);
+                ensureMarker(lastGpsFix.lat, lastGpsFix.lon, lastGpsFix.stolen);
+            }
             setOfflineStatus();
             return;
         }
@@ -125,13 +130,7 @@ async function updatePosition() {
         const latlng = [data.lat, data.lon];
 
         // Marker erstellen oder aktualisieren
-        if (marker) {
-            marker.setLatLng(latlng);
-            marker.setIcon(createBikeIcon(data.stolen));
-        } else {
-            marker = L.marker(latlng, { icon: createBikeIcon(data.stolen) }).addTo(map);
-            map.setView(latlng, 16);
-        }
+        ensureMarker(data.lat, data.lon, data.stolen);
 
         // Track aktualisieren
         trackPoints.push(latlng);
@@ -169,8 +168,14 @@ async function updatePosition() {
             updateStolenUI(isStolen);
         }
 
-        // Online-Status setzen (pruefungen oben)
-        setOnlineStatus();
+        // Status setzen je nach Freshness
+        if (!updateFresh) {
+            setOfflineStatus('Signal zu alt');
+        } else if (!fixFresh) {
+            setNoFixStatus('GPS-Fix zu alt');
+        } else {
+            setOnlineStatus();
+        }
 
     } catch (err) {
         console.error('Update failed:', err);
@@ -576,6 +581,18 @@ function toMs(ts) {
     const parsed = typeof ts === 'string' ? parseInt(ts, 10) : ts;
     const date = new Date(parsed);
     return isNaN(date.getTime()) ? null : date.getTime();
+}
+
+function ensureMarker(lat, lon, stolenFlag) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    const latlng = [lat, lon];
+    if (marker) {
+        marker.setLatLng(latlng);
+        marker.setIcon(createBikeIcon(stolenFlag));
+    } else {
+        marker = L.marker(latlng, { icon: createBikeIcon(stolenFlag) }).addTo(map);
+        map.setView(latlng, 16);
+    }
 }
 
 // Historie laden
