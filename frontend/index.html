@@ -296,22 +296,15 @@
             Center on bike
         </button>
 
+        <button class="btn-center" id="btnStartSystem" onclick="startSystem()">
+            Start System (GPS + MQTT)
+        </button>
+        <div class="info-value" id="systemStatus" style="margin-top:6px; min-height:18px;">&nbsp;</div>
+
         <button class="btn-center" id="btnGps" onclick="requestGpsFix()">
             GPS fix anfordern
         </button>
         <div class="info-value" id="jobStatus" style="margin-top:6px; min-height:18px;">&nbsp;</div>
-
-        <h3 style="margin-top: 20px;">System Start</h3>
-
-        <button class="btn-center" id="btnStartGps" onclick="startGpsReader()">
-            1. Start GPS Reader (Pi9)
-        </button>
-        <div class="info-value" id="gpsReaderStatus" style="margin-top:6px; min-height:18px;">&nbsp;</div>
-
-        <button class="btn-center" id="btnMqtt" onclick="startMqttForwarder()">
-            2. Start MQTT Forwarder (Gateway)
-        </button>
-        <div class="info-value" id="mqttStatus" style="margin-top:6px; min-height:18px;">&nbsp;</div>
 
         <button class="btn-stolen report" id="btnStolen" onclick="toggleStolen()">
             Report as stolen
