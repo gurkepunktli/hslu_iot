@@ -296,18 +296,13 @@
             Center on bike
         </button>
 
-        <button class="btn-center" id="btnStartSystem" onclick="startSystem()">
+        <button class="btn-center" id="btnStartSystem" onclick="startSystem()" style="background-color:#10b981;">
             Start System (GPS + MQTT)
         </button>
         <button class="btn-center" id="btnStopSystem" onclick="stopSystem()" style="background-color:#ef4444;">
             Stop System
         </button>
         <div class="info-value" id="systemStatus" style="margin-top:6px; min-height:18px;">&nbsp;</div>
-
-        <button class="btn-center" id="btnGps" onclick="requestGpsFix()">
-            GPS fix anfordern
-        </button>
-        <div class="info-value" id="jobStatus" style="margin-top:6px; min-height:18px;">&nbsp;</div>
 
         <button class="btn-stolen report" id="btnStolen" onclick="toggleStolen()">
             Report as stolen

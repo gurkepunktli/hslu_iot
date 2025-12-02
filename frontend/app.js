@@ -6,10 +6,8 @@ let map, marker, trackLine;
 let isStolen = false;
 let lastPosition = null;
 const trackPoints = [];
-let currentJobId = null;
-let jobPollTimer = null;
 
-// Karte initialisieren
+// Initialize map
 function initMap() {
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -69,13 +67,22 @@ async function updatePosition() {
         const lat = typeof latRaw === 'string' ? parseFloat(latRaw) : latRaw;
         const lon = typeof lonRaw === 'string' ? parseFloat(lonRaw) : lonRaw;
 
-        if (lat == null || lon == null || Number.isNaN(lat) || Number.isNaN(lon)) {
-            setOfflineStatus();
+        // If we have a timestamp, we have connection
+        const hasConnection = data.ts != null && data.ts !== '';
+
+        // Check if coordinates are valid
+        const hasValidCoords = lat != null && lon != null && !Number.isNaN(lat) && !Number.isNaN(lon);
+        const isZeroCoords = lat === 0 && lon === 0;
+
+        // Connection but no valid GPS fix
+        if (hasConnection && (!hasValidCoords || isZeroCoords)) {
+            setNoFixStatus();
             return;
         }
 
-        if (lat === 0 && lon === 0) {
-            setNoFixStatus();
+        // No connection at all
+        if (!hasConnection || !hasValidCoords) {
+            setOfflineStatus();
             return;
         }
 
@@ -280,51 +287,6 @@ function centerMap() {
     }
 }
 
-// GPS-Job anstossen (Frontend-Button)
-async function requestGpsFix() {
-    const btn = document.getElementById('btnGps');
-    const statusEl = document.getElementById('jobStatus');
-    if (!btn || !statusEl) return;
-
-    btn.disabled = true;
-    statusEl.textContent = 'Job wird angelegt...';
-
-    try {
-        const res = await fetch(`${CONFIG.API_URL}/api/job`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                type: 'gps_read',
-                target: CONFIG.GATEWAY_TARGET,
-                params: { device: CONFIG.DEVICE_ID }
-            })
-        });
-
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
-        currentJobId = data.job_id;
-
-        if (!currentJobId) {
-            throw new Error('job_id missing');
-        }
-
-        statusEl.textContent = 'Warte auf Gateway...';
-        jobPollTimer = setInterval(pollJobStatus, CONFIG.JOB_STATUS_POLL_MS);
-    } catch (err) {
-        console.error('Job start failed:', err);
-        statusEl.textContent = 'Fehler beim Job-Start';
-        btn.disabled = false;
-        currentJobId = null;
-        if (jobPollTimer) {
-            clearInterval(jobPollTimer);
-            jobPollTimer = null;
-        }
-    }
-}
-
 // System komplett starten (GPS Reader + MQTT Forwarder)
 async function startSystem() {
     const btn = document.getElementById('btnStartSystem');
@@ -334,8 +296,8 @@ async function startSystem() {
     btn.disabled = true;
 
     try {
-        // Schritt 1: GPS Reader starten
-        statusEl.textContent = 'Starte GPS Reader auf Pi9...';
+        // Step 1: Start GPS Reader
+        statusEl.textContent = 'Starting GPS Reader on Pi9...';
 
         const gpsRes = await fetch(`${CONFIG.API_URL}/api/job`, {
             method: 'POST',
@@ -354,17 +316,17 @@ async function startSystem() {
         const gpsData = await gpsRes.json();
         const gpsJobId = gpsData.job_id;
 
-        // Warte auf GPS Reader fertig
-        statusEl.textContent = 'GPS Pi arbeitet...';
+        // Wait for GPS Reader to finish
+        statusEl.textContent = 'GPS Pi is working...';
         const gpsReady = await waitForJob(gpsJobId);
 
         if (!gpsReady) {
-            throw new Error('GPS Reader konnte nicht gestartet werden');
+            throw new Error('GPS Reader could not be started');
         }
 
-        statusEl.textContent = '✓ GPS Reader läuft. Starte MQTT Forwarder...';
+        statusEl.textContent = '✓ GPS Reader running. Starting MQTT Forwarder...';
 
-        // Schritt 2: MQTT Forwarder starten
+        // Step 2: Start MQTT Forwarder
         const mqttRes = await fetch(`${CONFIG.API_URL}/api/job`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -382,25 +344,25 @@ async function startSystem() {
         const mqttData = await mqttRes.json();
         const mqttJobId = mqttData.job_id;
 
-        // Warte auf MQTT Forwarder fertig
-        statusEl.textContent = 'Gateway arbeitet...';
+        // Wait for MQTT Forwarder to finish
+        statusEl.textContent = 'Gateway is working...';
         const mqttReady = await waitForJob(mqttJobId);
 
         if (!mqttReady) {
-            throw new Error('MQTT Forwarder konnte nicht gestartet werden');
+            throw new Error('MQTT Forwarder could not be started');
         }
 
-        statusEl.textContent = '✓ System läuft (GPS + MQTT)';
+        statusEl.textContent = '✓ System running (GPS + MQTT)';
         btn.disabled = false;
 
     } catch (err) {
         console.error('System start failed:', err);
-        statusEl.textContent = `Fehler: ${err.message}`;
+        statusEl.textContent = `Error: ${err.message}`;
         btn.disabled = false;
     }
 }
 
-// System komplett stoppen (MQTT Forwarder + GPS Reader)
+// Stop complete system (MQTT Forwarder + GPS Reader)
 async function stopSystem() {
     const btn = document.getElementById('btnStopSystem');
     const statusEl = document.getElementById('systemStatus');
@@ -409,8 +371,8 @@ async function stopSystem() {
     btn.disabled = true;
 
     try {
-        // Schritt 1: MQTT Forwarder stoppen
-        statusEl.textContent = 'Stoppe MQTT Forwarder...';
+        // Step 1: Stop MQTT Forwarder
+        statusEl.textContent = 'Stopping MQTT Forwarder...';
 
         const mqttRes = await fetch(`${CONFIG.API_URL}/api/job`, {
             method: 'POST',
@@ -429,17 +391,17 @@ async function stopSystem() {
         const mqttData = await mqttRes.json();
         const mqttJobId = mqttData.job_id;
 
-        // Warte auf MQTT Stop fertig
-        statusEl.textContent = 'Gateway arbeitet...';
+        // Wait for MQTT Stop to finish
+        statusEl.textContent = 'Gateway is working...';
         const mqttStopped = await waitForJob(mqttJobId);
 
         if (!mqttStopped) {
-            throw new Error('MQTT Forwarder konnte nicht gestoppt werden');
+            throw new Error('MQTT Forwarder could not be stopped');
         }
 
-        statusEl.textContent = '✓ MQTT gestoppt. Stoppe GPS Reader...';
+        statusEl.textContent = '✓ MQTT stopped. Stopping GPS Reader...';
 
-        // Schritt 2: GPS Reader stoppen
+        // Step 2: Stop GPS Reader
         const gpsRes = await fetch(`${CONFIG.API_URL}/api/job`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -457,20 +419,20 @@ async function stopSystem() {
         const gpsData = await gpsRes.json();
         const gpsJobId = gpsData.job_id;
 
-        // Warte auf GPS Stop fertig
-        statusEl.textContent = 'GPS Pi arbeitet...';
+        // Wait for GPS Stop to finish
+        statusEl.textContent = 'GPS Pi is working...';
         const gpsStopped = await waitForJob(gpsJobId);
 
         if (!gpsStopped) {
-            throw new Error('GPS Reader konnte nicht gestoppt werden');
+            throw new Error('GPS Reader could not be stopped');
         }
 
-        statusEl.textContent = '✓ System gestoppt';
+        statusEl.textContent = '✓ System stopped';
         btn.disabled = false;
 
     } catch (err) {
         console.error('System stop failed:', err);
-        statusEl.textContent = `Fehler: ${err.message}`;
+        statusEl.textContent = `Error: ${err.message}`;
         btn.disabled = false;
     }
 }
@@ -522,63 +484,6 @@ async function waitForJob(jobId) {
             }
         }, CONFIG.JOB_STATUS_POLL_MS);
     });
-}
-
-// Job-Status pollen
-async function pollJobStatus() {
-    if (!currentJobId) return;
-    const statusEl = document.getElementById('jobStatus');
-    const btn = document.getElementById('btnGps');
-    if (!statusEl || !btn) return;
-
-    try {
-        const res = await fetch(`${CONFIG.API_URL}/api/job/status?job_id=${currentJobId}`);
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        const job = data?.job;
-
-        if (!job) {
-            statusEl.textContent = 'Job nicht gefunden';
-            clearInterval(jobPollTimer);
-            jobPollTimer = null;
-            btn.disabled = false;
-            currentJobId = null;
-            return;
-        }
-
-        if (job.status === 'queued') {
-            statusEl.textContent = 'Gateway arbeitet...';
-            return;
-        }
-
-        if (job.status === 'done') {
-            statusEl.textContent = 'GPS aktualisiert';
-            clearInterval(jobPollTimer);
-            jobPollTimer = null;
-            btn.disabled = false;
-            currentJobId = null;
-            updatePosition(); // frische Position vom Backend holen
-            return;
-        }
-
-        if (['failed', 'timeout'].includes(job.status)) {
-            statusEl.textContent = `Job: ${job.status}`;
-            clearInterval(jobPollTimer);
-            jobPollTimer = null;
-            btn.disabled = false;
-            currentJobId = null;
-            return;
-        }
-    } catch (err) {
-        console.error('Status poll failed:', err);
-        statusEl.textContent = 'Status-Check fehlgeschlagen';
-        clearInterval(jobPollTimer);
-        jobPollTimer = null;
-        btn.disabled = false;
-        currentJobId = null;
-    }
 }
 
 // Historie laden
