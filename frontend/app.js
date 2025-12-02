@@ -214,17 +214,15 @@ function updateUI(data) {
 
 // Online-Status setzen
 function setOnlineStatus(message) {
-    const badge = document.getElementById('statusBadge');
-    const text = document.getElementById('statusText');
-    badge.className = 'status-badge';
     currentStatus = 'online';
     if (isStolen) {
-        badge.classList.add('stolen');
-        text.textContent = 'STOLEN';
+        setMainStatus('alert', 'STOLEN', 'Bike is locked');
     } else {
-        badge.classList.add('online');
-        text.textContent = message || 'Online';
+        setMainStatus('online', 'Online', message || 'Signal OK');
     }
+    setLamp('lampConnection', 'online', 'Online');
+    setLamp('lampGps', 'online', 'GPS fix OK');
+    if (isStolen) setLamp('lampAlert', 'alert', 'STOLEN'); else updateAlertLamp();
     if (!systemRunning) {
         systemRunning = true;
         updateButtonVisibility();
@@ -233,20 +231,28 @@ function setOnlineStatus(message) {
 
 // Offline-Status setzen
 function setOfflineStatus(message) {
-    const badge = document.getElementById('statusBadge');
-    const text = document.getElementById('statusText');
-    badge.className = 'status-badge offline';
-    text.textContent = message || 'No connection';
     currentStatus = 'offline';
+    if (isStolen) {
+        setMainStatus('alert', 'STOLEN', message || 'No connection');
+    } else {
+        setMainStatus('offline', 'Offline', message || 'No connection');
+    }
+    setLamp('lampConnection', 'offline', message || 'No signal');
+    setLamp('lampGps', 'offline', '--');
+    if (isStolen) setLamp('lampAlert', 'alert', 'STOLEN'); else updateAlertLamp();
 }
 
 // Error: No GPS fix available
 function setNoFixStatus(message) {
-    const badge = document.getElementById('statusBadge');
-    const text = document.getElementById('statusText');
     currentStatus = 'nofix';
-    badge.className = 'status-badge nofix';
-    text.textContent = message || 'No GPS fix available';
+    if (isStolen) {
+        setMainStatus('alert', 'STOLEN', message || 'No GPS fix');
+    } else {
+        setMainStatus('nofix', 'No GPS fix', message || 'Waiting for satellites');
+    }
+    setLamp('lampConnection', 'online', 'Online');
+    setLamp('lampGps', 'nofix', message || 'No GPS fix');
+    if (isStolen) setLamp('lampAlert', 'alert', 'STOLEN'); else updateAlertLamp();
     if (!systemRunning) {
         systemRunning = true;
         updateButtonVisibility();
@@ -267,30 +273,49 @@ function updateButtonVisibility() {
     }
 }
 
+// Hauptstatus (Badge) setzen
+function setMainStatus(state, title, subtitle) {
+    const text = document.getElementById('statusText');
+    const sub = document.getElementById('statusSub');
+    const dot = document.getElementById('statusDot');
+    if (text) text.textContent = title || '';
+    if (sub) sub.textContent = subtitle || '';
+    if (dot) dot.className = `badge-dot ${state || ''}`.trim();
+}
+
+// Status-Lampe setzen
+function setLamp(id, state, valueText) {
+    const lamp = document.getElementById(id);
+    const value = document.getElementById(`${id}Text`);
+    if (!lamp) return;
+    lamp.className = `lamp ${state || ''}`.trim();
+    if (value) value.textContent = valueText || '--';
+}
+
+function updateAlertLamp() {
+    const state = isStolen ? 'alert' : 'online';
+    setLamp('lampAlert', state, isStolen ? 'STOLEN' : 'Secure');
+}
+
 // Diebstahl-UI aktualisieren
 function updateStolenUI(stolen) {
     isStolen = stolen;
 
     const banner = document.getElementById('stolenBanner');
-    const badge = document.getElementById('statusBadge');
     const btn = document.getElementById('btnStolen');
-    const text = document.getElementById('statusText');
 
     if (stolen) {
         banner.classList.add('active');
-        badge.className = 'status-badge stolen';
-        text.textContent = 'STOLEN';
+        setMainStatus('alert', 'STOLEN', 'Bike is locked and alert');
+        setLamp('lampAlert', 'alert', 'STOLEN');
         btn.className = 'btn-stolen clear';
         btn.textContent = 'Unlock bike';
     } else {
         banner.classList.remove('active');
-        if (currentStatus === 'online') {
-            setOnlineStatus();
-        } else if (currentStatus === 'nofix') {
-            setNoFixStatus();
-        } else {
-            setOfflineStatus();
-        }
+        if (currentStatus === 'online') setOnlineStatus();
+        else if (currentStatus === 'nofix') setNoFixStatus();
+        else setOfflineStatus();
+        updateAlertLamp();
         btn.className = 'btn-stolen report';
         btn.textContent = 'Report as stolen';
     }
@@ -339,17 +364,26 @@ async function toggleStolen() {
     btn.disabled = false;
 }
 
+function setSystemStatus(text, mode = 'muted') {
+    const el = document.getElementById('systemStatus');
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = 'system-status';
+    if (mode === 'ok') el.classList.add('ok');
+    if (mode === 'warn') el.classList.add('warn');
+    if (mode === 'alert') el.classList.add('alert');
+}
+
 // System komplett starten (GPS Reader + MQTT Forwarder)
 async function startSystem() {
     const btn = document.getElementById('btnStartSystem');
-    const statusEl = document.getElementById('systemStatus');
-    if (!btn || !statusEl) return;
+    if (!btn) return;
 
     btn.disabled = true;
 
     try {
         // Step 1: Start GPS Reader
-        statusEl.textContent = 'Starting GPS Reader...';
+        setSystemStatus('Starting GPS Reader...', 'warn');
 
         const gpsRes = await fetch(`${CONFIG.API_URL}/api/job`, {
             method: 'POST',
@@ -369,14 +403,14 @@ async function startSystem() {
         const gpsJobId = gpsData.job_id;
 
         // Wait for GPS Reader to finish
-        statusEl.textContent = 'GPS Reader running...';
+        setSystemStatus('GPS Reader running...', 'warn');
         const gpsReady = await waitForJob(gpsJobId);
 
         if (!gpsReady) {
             throw new Error('GPS Reader could not be started');
         }
 
-        statusEl.textContent = 'GPS Reader ok. Starting MQTT Forwarder...';
+        setSystemStatus('GPS Reader ok. Starting MQTT Forwarder...', 'warn');
 
         // Step 2: Start MQTT Forwarder
         const mqttRes = await fetch(`${CONFIG.API_URL}/api/job`, {
@@ -397,21 +431,21 @@ async function startSystem() {
         const mqttJobId = mqttData.job_id;
 
         // Wait for MQTT Forwarder to finish
-        statusEl.textContent = 'Gateway is working...';
+        setSystemStatus('Gateway is working...', 'warn');
         const mqttReady = await waitForJob(mqttJobId);
 
         if (!mqttReady) {
             throw new Error('MQTT Forwarder could not be started');
         }
 
-        statusEl.textContent = 'System running (GPS + MQTT)';
+        setSystemStatus('System running (GPS + MQTT)', 'ok');
         btn.disabled = false;
         systemRunning = true;
         updateButtonVisibility();
 
     } catch (err) {
         console.error('System start failed:', err);
-        statusEl.textContent = `Error: ${err.message}`;
+        setSystemStatus(`Error: ${err.message}`, 'alert');
         btn.disabled = false;
     }
 }
@@ -419,14 +453,13 @@ async function startSystem() {
 // Stop complete system (MQTT Forwarder + GPS Reader)
 async function stopSystem() {
     const btn = document.getElementById('btnStopSystem');
-    const statusEl = document.getElementById('systemStatus');
-    if (!btn || !statusEl) return;
+    if (!btn) return;
 
     btn.disabled = true;
 
     try {
         // Step 1: Stop MQTT Forwarder
-        statusEl.textContent = 'Stopping MQTT Forwarder...';
+        setSystemStatus('Stopping MQTT Forwarder...', 'warn');
 
         const mqttRes = await fetch(`${CONFIG.API_URL}/api/job`, {
             method: 'POST',
@@ -446,14 +479,14 @@ async function stopSystem() {
         const mqttJobId = mqttData.job_id;
 
         // Wait for MQTT Stop to finish
-        statusEl.textContent = 'Gateway is working...';
+        setSystemStatus('Gateway is working...', 'warn');
         const mqttStopped = await waitForJob(mqttJobId);
 
         if (!mqttStopped) {
             throw new Error('MQTT Forwarder could not be stopped');
         }
 
-        statusEl.textContent = 'MQTT stopped. Stopping GPS Reader...';
+        setSystemStatus('MQTT stopped. Stopping GPS Reader...', 'warn');
 
         // Step 2: Stop GPS Reader
         const gpsRes = await fetch(`${CONFIG.API_URL}/api/job`, {
@@ -474,21 +507,21 @@ async function stopSystem() {
         const gpsJobId = gpsData.job_id;
 
         // Wait for GPS Stop to finish
-        statusEl.textContent = 'GPS Reader stopping...';
+        setSystemStatus('GPS Reader stopping...', 'warn');
         const gpsStopped = await waitForJob(gpsJobId);
 
         if (!gpsStopped) {
             throw new Error('GPS Reader could not be stopped');
         }
 
-        statusEl.textContent = 'System stopped';
+        setSystemStatus('System stopped', 'ok');
         btn.disabled = false;
         systemRunning = false;
         updateButtonVisibility();
 
     } catch (err) {
         console.error('System stop failed:', err);
-        statusEl.textContent = `Error: ${err.message}`;
+        setSystemStatus(`Error: ${err.message}`, 'alert');
         btn.disabled = false;
     }
 }
