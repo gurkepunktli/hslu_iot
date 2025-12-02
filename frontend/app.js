@@ -825,19 +825,21 @@ async function checkSystemStatus() {
 }
 
 // App starten
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initMap();
     loadHistory();
     updatePosition();
 
-    // Check if system is already running
-    checkSystemStatus();
+    // Check if system is already running (wait for it to complete)
+    await checkSystemStatus();
+
+    // Set default system status only if system is not running
+    if (!systemRunning) {
+        setSystemStatus('System idle', 'muted');
+    }
 
     // Initial button visibility
     updateButtonVisibility();
-
-    // Default system status
-    setSystemStatus('System idle', 'muted');
 
     // Start update countdown animation
     startUpdateCountdown();
