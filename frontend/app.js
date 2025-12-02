@@ -85,18 +85,19 @@ async function updatePosition() {
             updateLastUpdateTimestamp(lastUpdateTs);
         }
 
-        // Connection but no valid GPS fix
-        if (hasConnection && (!hasValidCoords || isZeroCoords)) {
-            setNoFixStatus();
-            return;
-        }
-
         // No connection at all
-        if (!hasConnection || !hasValidCoords) {
+        if (!hasConnection) {
             setOfflineStatus();
             return;
         }
 
+        // Connection but no valid GPS fix
+        if (!hasValidCoords || isZeroCoords) {
+            setNoFixStatus();
+            return;
+        }
+
+        // Valid GPS data
         data.lat = lat;
         data.lon = lon;
 
@@ -153,20 +154,16 @@ async function updatePosition() {
         }
 
         // Online/Offline anhand Alter des letzten Signals (10 Minuten)
-        if (data.ts) {
-            let tsValue = data.ts;
-            if (typeof tsValue === 'string') {
-                tsValue = parseInt(tsValue, 10);
-            }
-            const tsDate = new Date(tsValue);
-            if (!isNaN(tsDate.getTime())) {
-                const ageMs = Date.now() - tsDate.getTime();
-                const tenMinutesMs = 10 * 60 * 1000;
-                if (ageMs >= 0 && ageMs <= tenMinutesMs) {
-                    setOnlineStatus();
-                } else {
-                    setOfflineStatus();
-                }
+        let tsValue = lastUpdateTs || data.ts;
+        if (typeof tsValue === 'string') {
+            tsValue = parseInt(tsValue, 10);
+        }
+        const tsDate = new Date(tsValue);
+        if (!isNaN(tsDate.getTime())) {
+            const ageMs = Date.now() - tsDate.getTime();
+            const tenMinutesMs = 10 * 60 * 1000;
+            if (ageMs >= 0 && ageMs <= tenMinutesMs) {
+                setOnlineStatus();
             } else {
                 setOfflineStatus();
             }
@@ -223,8 +220,10 @@ function setOnlineStatus() {
         badge.classList.add('online');
         text.textContent = 'Online';
     }
-    systemRunning = true;
-    updateButtonVisibility();
+    if (!systemRunning) {
+        systemRunning = true;
+        updateButtonVisibility();
+    }
 }
 
 // Offline-Status setzen
@@ -233,8 +232,7 @@ function setOfflineStatus() {
     const text = document.getElementById('statusText');
     badge.className = 'status-badge offline';
     text.textContent = 'No connection';
-    systemRunning = false;
-    updateButtonVisibility();
+    // Don't change systemRunning here - user might have started system but lost connection temporarily
 }
 
 // Error: No GPS fix available
@@ -242,9 +240,11 @@ function setNoFixStatus() {
     const badge = document.getElementById('statusBadge');
     const text = document.getElementById('statusText');
     badge.className = 'status-badge nofix';
-    text.textContent = 'Error: No GPS fix available';
-    systemRunning = true; // System is running, just no GPS fix
-    updateButtonVisibility();
+    text.textContent = 'No GPS fix available';
+    if (!systemRunning) {
+        systemRunning = true;
+        updateButtonVisibility();
+    }
 }
 
 // Update button visibility based on system state
@@ -607,7 +607,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initMap();
     loadHistory();
     updatePosition();
-    
+
+    // Initial button visibility
+    updateButtonVisibility();
+
     // Regelmässige Updates
     setInterval(updatePosition, CONFIG.UPDATE_INTERVAL);
 });
