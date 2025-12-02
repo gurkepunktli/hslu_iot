@@ -104,7 +104,7 @@ async function updatePosition() {
         }
 
         if (!updateFresh) {
-            setOfflineStatus('Letztes Signal zu alt');
+            setOfflineStatus('Signal zu alt');
             return;
         }
 
