@@ -367,11 +367,17 @@ function setSystemStatus(text, mode = 'muted') {
     const el = document.getElementById('systemStatus');
     if (!el) return;
     el.textContent = text || 'No current status';
-    el.className = 'system-status';
-    if (mode === 'ok') el.classList.add('ok');
-    if (mode === 'warn') el.classList.add('warn');
-    if (mode === 'alert') el.classList.add('alert');
-    if (mode === 'muted') el.classList.add('muted');
+
+    const base =
+        'rounded-xl border-2 px-4 py-2 text-sm font-semibold text-center shadow-sm w-full';
+    const styles = {
+        ok: 'border-emerald-300 bg-emerald-50 text-emerald-800',
+        warn: 'border-amber-300 bg-amber-50 text-amber-800',
+        alert: 'border-rose-300 bg-rose-50 text-rose-800',
+        muted: 'border-slate-300 bg-white text-slate-700'
+    };
+    const variant = styles[mode] || styles.muted;
+    el.className = `${base} ${variant}`;
 }
 
 // System komplett starten (GPS Reader + MQTT Forwarder)
