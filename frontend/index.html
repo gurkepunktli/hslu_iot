@@ -16,72 +16,117 @@
             top: 15px;
             right: 15px;
             background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
             z-index: 1000;
-            min-width: 220px;
-        }
-        
-        .panel h2 {
-            font-size: 16px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .status { 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #22c55e;
-            animation: pulse 2s infinite;
-        }
-        
-        .status-dot.offline {
-            background: #f59e0b;
-            animation: none;
+            min-width: 280px;
+            max-width: 320px;
         }
 
-        .status-dot.nofix {
-            background: #3b82f6;
-            animation: none;
+        .panel h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #111827;
         }
-        
-        .status-dot.stolen {
-            background: #ef4444;
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 20px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .status-badge.online {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.offline {
+            background: #fed7aa;
+            color: #9a3412;
+        }
+
+        .status-badge.nofix {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-badge.stolen {
+            background: #fee2e2;
+            color: #991b1b;
+            animation: pulse-badge 1s infinite;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-badge.online .status-dot {
+            animation: pulse 2s infinite;
+        }
+
+        .status-badge.stolen .status-dot {
             animation: pulse-red 0.5s infinite;
         }
-        
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            50% { opacity: 0.4; }
         }
-        
+
         @keyframes pulse-red {
             0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(1.2); }
+            50% { opacity: 0.7; transform: scale(1.3); }
+        }
+
+        @keyframes pulse-badge {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
         }
         
+        .info-section {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin: 10px 0;
-            font-size: 14px;
+            margin: 8px 0;
+            font-size: 13px;
+            line-height: 1.6;
         }
-        
-        .info-label { color: #666; }
-        .info-value { font-weight: 600; }
+
+        .info-row:first-child {
+            margin-top: 0;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #111827;
+        }
         
         .stolen-banner {
             display: none;
@@ -136,21 +181,61 @@
             background: #bbf7d0;
         }
 
-        .btn-center {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            background: white;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
+        .control-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
         }
 
-        .btn-center:hover {
-            background: #f9fafb;
-            border-color: #d1d5db;
+        .btn-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-control:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-control.start {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-control.start:hover:not(:disabled) {
+            background: #059669;
+        }
+
+        .btn-control.stop {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-control.stop:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        .btn-control.hidden {
+            display: none;
+        }
+
+        .system-status {
+            font-size: 13px;
+            color: #6b7280;
+            text-align: center;
+            min-height: 20px;
+            margin-bottom: 12px;
         }
 
         .bike-icon {
@@ -266,48 +351,49 @@
     
     <div class="panel">
         <h2>Bike Tracker</h2>
-        
-        <div class="status">
-            <div class="status-dot" id="statusDot"></div>
+
+        <div class="status-badge" id="statusBadge">
+            <div class="status-dot"></div>
             <span id="statusText">Connecting...</span>
         </div>
-        
-        <div class="info-row">
-            <span class="info-label">Speed</span>
-            <span class="info-value" id="speed">-- km/h</span>
-        </div>
-        
-        <div class="info-row">
-            <span class="info-label">Course</span>
-            <span class="info-value" id="course">--&deg;</span>
-        </div>
-        
-        <div class="info-row">
-            <span class="info-label">Last update</span>
-            <span class="info-value" id="lastUpdate">--:--:--</span>
+
+        <div class="info-section">
+            <div class="info-row">
+                <span class="info-label">Speed</span>
+                <span class="info-value" id="speed">-- km/h</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Course</span>
+                <span class="info-value" id="course">--&deg;</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Last update</span>
+                <span class="info-value" id="lastUpdate">--:--:--</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Last GPS fix</span>
+                <span class="info-value" id="lastFix">--:--:--</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Coordinates</span>
+                <span class="info-value" id="coords">--, --</span>
+            </div>
         </div>
 
-        <div class="info-row">
-            <span class="info-label">Last GPS fix</span>
-            <span class="info-value" id="lastFix">--:--:--</span>
+        <div class="control-buttons">
+            <button class="btn-control start" id="btnStartSystem" onclick="startSystem()">
+                ▶ Start System
+            </button>
+            <button class="btn-control stop hidden" id="btnStopSystem" onclick="stopSystem()">
+                ■ Stop System
+            </button>
         </div>
 
-        <div class="info-row">
-            <span class="info-label">Coordinates</span>
-            <span class="info-value" id="coords">--, --</span>
-        </div>
-
-        <button class="btn-center" onclick="centerMap()">
-            Center on bike
-        </button>
-
-        <button class="btn-center" id="btnStartSystem" onclick="startSystem()" style="background-color:#10b981;">
-            Start System (GPS + MQTT)
-        </button>
-        <button class="btn-center" id="btnStopSystem" onclick="stopSystem()" style="background-color:#ef4444;">
-            Stop System
-        </button>
-        <div class="info-value" id="systemStatus" style="margin-top:6px; min-height:18px;">&nbsp;</div>
+        <div class="system-status" id="systemStatus">&nbsp;</div>
 
         <button class="btn-stolen report" id="btnStolen" onclick="toggleStolen()">
             Report as stolen

@@ -6,6 +6,7 @@ let map, marker, trackLine;
 let isStolen = false;
 let lastPosition = null;
 let lastGpsFix = null; // Last valid GPS fix with coordinates
+let systemRunning = false; // Track if system (GPS + MQTT) is running
 const trackPoints = [];
 
 // Initialize map
@@ -212,29 +213,52 @@ function updateUI(data) {
 
 // Online-Status setzen
 function setOnlineStatus() {
-    const dot = document.getElementById('statusDot');
+    const badge = document.getElementById('statusBadge');
     const text = document.getElementById('statusText');
-    dot.className = 'status-dot';
+    badge.className = 'status-badge';
     if (isStolen) {
-        dot.classList.add('stolen');
+        badge.classList.add('stolen');
+        text.textContent = 'STOLEN';
+    } else {
+        badge.classList.add('online');
+        text.textContent = 'Online';
     }
-    text.textContent = isStolen ? 'STOLEN' : 'Online';
+    systemRunning = true;
+    updateButtonVisibility();
 }
 
 // Offline-Status setzen
 function setOfflineStatus() {
-    const dot = document.getElementById('statusDot');
+    const badge = document.getElementById('statusBadge');
     const text = document.getElementById('statusText');
-    dot.className = 'status-dot offline';
+    badge.className = 'status-badge offline';
     text.textContent = 'No connection';
+    systemRunning = false;
+    updateButtonVisibility();
 }
 
 // Error: No GPS fix available
 function setNoFixStatus() {
-    const dot = document.getElementById('statusDot');
+    const badge = document.getElementById('statusBadge');
     const text = document.getElementById('statusText');
-    dot.className = 'status-dot nofix';
+    badge.className = 'status-badge nofix';
     text.textContent = 'Error: No GPS fix available';
+    systemRunning = true; // System is running, just no GPS fix
+    updateButtonVisibility();
+}
+
+// Update button visibility based on system state
+function updateButtonVisibility() {
+    const startBtn = document.getElementById('btnStartSystem');
+    const stopBtn = document.getElementById('btnStopSystem');
+
+    if (systemRunning) {
+        startBtn.classList.add('hidden');
+        stopBtn.classList.remove('hidden');
+    } else {
+        startBtn.classList.remove('hidden');
+        stopBtn.classList.add('hidden');
+    }
 }
 
 
@@ -243,20 +267,26 @@ function updateStolenUI(stolen) {
     isStolen = stolen;
 
     const banner = document.getElementById('stolenBanner');
-    const dot = document.getElementById('statusDot');
+    const badge = document.getElementById('statusBadge');
     const btn = document.getElementById('btnStolen');
     const text = document.getElementById('statusText');
 
     if (stolen) {
         banner.classList.add('active');
-        dot.classList.add('stolen');
+        badge.className = 'status-badge stolen';
         text.textContent = 'STOLEN';
         btn.className = 'btn-stolen clear';
         btn.textContent = 'Unlock bike';
     } else {
         banner.classList.remove('active');
-        dot.classList.remove('stolen');
-        text.textContent = 'Online';
+        // Restore appropriate status based on current state
+        if (systemRunning) {
+            badge.className = 'status-badge online';
+            text.textContent = 'Online';
+        } else {
+            badge.className = 'status-badge offline';
+            text.textContent = 'No connection';
+        }
         btn.className = 'btn-stolen report';
         btn.textContent = 'Report as stolen';
     }
@@ -304,13 +334,6 @@ async function toggleStolen() {
     }
     
     btn.disabled = false;
-}
-
-// Karte auf Fahrrad zentrieren
-function centerMap() {
-    if (lastPosition) {
-        map.setView([lastPosition.lat, lastPosition.lon], 16);
-    }
 }
 
 // System komplett starten (GPS Reader + MQTT Forwarder)
@@ -380,6 +403,8 @@ async function startSystem() {
 
         statusEl.textContent = '✓ System running (GPS + MQTT)';
         btn.disabled = false;
+        systemRunning = true;
+        updateButtonVisibility();
 
     } catch (err) {
         console.error('System start failed:', err);
@@ -455,6 +480,8 @@ async function stopSystem() {
 
         statusEl.textContent = '✓ System stopped';
         btn.disabled = false;
+        systemRunning = false;
+        updateButtonVisibility();
 
     } catch (err) {
         console.error('System stop failed:', err);
