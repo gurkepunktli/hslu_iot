@@ -809,10 +809,10 @@ async function checkSystemStatus() {
         if (lastUpdateTs) {
             const now = Date.now();
             const lastUpdateMs = typeof lastUpdateTs === 'string' ? parseInt(lastUpdateTs, 10) : lastUpdateTs;
-            const ageSeconds = (now - lastUpdateMs) / 1000;
+            const ageMs = now - lastUpdateMs;
 
-            // If last update is less than 30 seconds old, system is likely running
-            if (ageSeconds < 30) {
+            // Use same threshold as online status check (STALE_UPDATE_MS = 60s)
+            if (ageMs <= CONFIG.STALE_UPDATE_MS) {
                 systemRunning = true;
                 updateButtonVisibility();
                 setSystemStatus('✓ System running (GPS + MQTT)', 'ok');
