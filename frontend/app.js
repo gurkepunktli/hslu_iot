@@ -602,7 +602,8 @@ async function loadHistory() {
 
         if (!res.ok) return;
 
-        const data = await res.json();
+        const dataRaw = await res.json();
+        const data = Array.isArray(dataRaw) ? dataRaw.map(normalizePoint) : [];
 
         if (!Array.isArray(data) || data.length === 0) return;
 
@@ -611,7 +612,7 @@ async function loadHistory() {
 
         // Punkte in chronologischer Reihenfolge fuer den Track
         data.slice().reverse().forEach(p => {
-            if (p.lat && p.lon) {
+            if (Number.isFinite(p.lat) && Number.isFinite(p.lon)) {
                 trackPoints.push([p.lat, p.lon]);
             }
         });
@@ -627,7 +628,7 @@ async function loadHistory() {
         }
 
         // Fallback: letzten Stand im Panel anzeigen
-        if (latest && latest.lat && latest.lon) {
+        if (latest && Number.isFinite(latest.lat) && Number.isFinite(latest.lon)) {
             lastPosition = latest;
             lastGpsFix = latest;
             updateUI(latest);
@@ -675,3 +676,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Regelmaessige Updates
     setInterval(updatePosition, CONFIG.UPDATE_INTERVAL);
 });
+
+// Normalisiert Koordinaten/Nummern aus API
+function normalizePoint(p) {
+    if (!p || typeof p !== 'object') return {};
+    const lat = p.lat != null ? parseFloat(p.lat) : NaN;
+    const lon = p.lon != null ? parseFloat(p.lon) : NaN;
+    const speed = p.speed != null ? parseFloat(p.speed) : p.speed_kn != null ? parseFloat(p.speed_kn) : 0;
+    const course = p.course != null ? parseFloat(p.course) : p.course_deg != null ? parseFloat(p.course_deg) : 0;
+    return { ...p, lat, lon, speed, course };
+}
