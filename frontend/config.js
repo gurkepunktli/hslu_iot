@@ -28,5 +28,6 @@ const CONFIG = {
 
     // Job-/Polling-Einstellungen
     JOB_STATUS_POLL_MS: 2000,
-    GATEWAY_TARGET: 'gateway'
+    GATEWAY_TARGET: 'gateway',
+    GPS_PI_TARGET: 'pi9'
 };

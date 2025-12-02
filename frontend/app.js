@@ -325,6 +325,86 @@ async function requestGpsFix() {
     }
 }
 
+// GPS Reader auf Pi9 starten
+async function startGpsReader() {
+    const btn = document.getElementById('btnStartGps');
+    const statusEl = document.getElementById('gpsReaderStatus');
+    if (!btn || !statusEl) return;
+
+    btn.disabled = true;
+    statusEl.textContent = 'Job wird angelegt...';
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/api/job`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'start_gps_reader',
+                target: CONFIG.GPS_PI_TARGET,
+                params: { device: CONFIG.DEVICE_ID }
+            })
+        });
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const jobId = data.job_id;
+
+        if (!jobId) {
+            throw new Error('job_id missing');
+        }
+
+        statusEl.textContent = 'Warte auf GPS Pi...';
+
+        // Poll status for this specific job
+        const pollTimer = setInterval(async () => {
+            try {
+                const statusRes = await fetch(`${CONFIG.API_URL}/api/job/status?job_id=${jobId}`);
+                if (!statusRes.ok) {
+                    throw new Error(`HTTP ${statusRes.status}`);
+                }
+                const statusData = await statusRes.json();
+                const job = statusData?.job;
+
+                if (!job) {
+                    statusEl.textContent = 'Job nicht gefunden';
+                    clearInterval(pollTimer);
+                    btn.disabled = false;
+                    return;
+                }
+
+                if (job.status === 'done') {
+                    statusEl.textContent = 'GPS Reader gestartet';
+                    clearInterval(pollTimer);
+                    btn.disabled = false;
+                    return;
+                }
+
+                if (['failed', 'timeout'].includes(job.status)) {
+                    statusEl.textContent = `Fehler: ${job.status}`;
+                    clearInterval(pollTimer);
+                    btn.disabled = false;
+                    return;
+                }
+
+                statusEl.textContent = 'GPS Pi arbeitet...';
+            } catch (err) {
+                console.error('Status poll failed:', err);
+                statusEl.textContent = 'Status-Check fehlgeschlagen';
+                clearInterval(pollTimer);
+                btn.disabled = false;
+            }
+        }, CONFIG.JOB_STATUS_POLL_MS);
+
+    } catch (err) {
+        console.error('GPS Reader start failed:', err);
+        statusEl.textContent = 'Fehler beim Job-Start';
+        btn.disabled = false;
+    }
+}
+
 // MQTT Forwarder starten
 async function startMqttForwarder() {
     const btn = document.getElementById('btnMqtt');
