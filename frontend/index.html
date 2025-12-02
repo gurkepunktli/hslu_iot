@@ -46,6 +46,28 @@
         .btn-error:hover { filter: brightness(0.95); }
         .btn-ghost { background: #f8fafc; color: #0f172a; border-color: #e2e8f0; }
         .btn-ghost:hover { background: #e2e8f0; }
+        /* Auto-Update Spinner */
+        .pulse-ring {
+            position: relative;
+            width: 20px;
+            height: 20px;
+        }
+        .pulse-ring::before, .pulse-ring::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 3px solid #2563eb;
+            opacity: 0.6;
+            animation: ring 1.6s infinite ease-out;
+        }
+        .pulse-ring::after {
+            animation-delay: 0.3s;
+        }
+        @keyframes ring {
+            0% { transform: scale(0.6); opacity: 0.6; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-900">
@@ -76,6 +98,13 @@
             </div>
 
             <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm space-y-3">
+                <div class="flex items-center justify-between text-sm text-slate-600">
+                    <span>Auto-Update</span>
+                    <div class="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                        <div class="pulse-ring"></div>
+                        <span>Live</span>
+                    </div>
+                </div>
                 <div class="grid grid-cols-2 text-sm text-slate-500 gap-y-2">
                     <span>Speed</span><span class="font-semibold text-slate-900 text-right" id="speed">-- km/h</span>
                     <span>Course</span><span class="font-semibold text-slate-900 text-right" id="course">--°</span>
