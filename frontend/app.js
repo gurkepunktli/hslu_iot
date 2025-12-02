@@ -222,7 +222,7 @@ function setOnlineStatus(message) {
     }
     setLamp('lampConnection', 'online', 'Online');
     setLamp('lampGps', 'online', 'GPS fix OK');
-    if (isStolen) setLamp('lampAlert', 'alert', 'STOLEN'); else updateAlertLamp();
+   ;
     if (!systemRunning) {
         systemRunning = true;
         updateButtonVisibility();
@@ -239,7 +239,7 @@ function setOfflineStatus(message) {
     }
     setLamp('lampConnection', 'offline', message || 'No signal');
     setLamp('lampGps', 'offline', '--');
-    if (isStolen) setLamp('lampAlert', 'alert', 'STOLEN'); else updateAlertLamp();
+   ;
 }
 
 // Error: No GPS fix available
@@ -252,7 +252,7 @@ function setNoFixStatus(message) {
     }
     setLamp('lampConnection', 'online', 'Online');
     setLamp('lampGps', 'nofix', message || 'No GPS fix');
-    if (isStolen) setLamp('lampAlert', 'alert', 'STOLEN'); else updateAlertLamp();
+   ;
     if (!systemRunning) {
         systemRunning = true;
         updateButtonVisibility();
@@ -292,11 +292,6 @@ function setLamp(id, state, valueText) {
     if (value) value.textContent = valueText || '--';
 }
 
-function updateAlertLamp() {
-    const state = isStolen ? 'alert' : 'online';
-    setLamp('lampAlert', state, isStolen ? 'STOLEN' : 'Secure');
-}
-
 // Diebstahl-UI aktualisieren
 function updateStolenUI(stolen) {
     isStolen = stolen;
@@ -307,8 +302,7 @@ function updateStolenUI(stolen) {
     if (stolen) {
         banner.classList.add('active');
         setMainStatus('alert', 'STOLEN', 'Bike is locked and alert');
-        setLamp('lampAlert', 'alert', 'STOLEN');
-        btn.className = 'btn-stolen clear';
+                btn.className = 'btn-stolen clear';
         btn.textContent = 'Unlock bike';
     } else {
         banner.classList.remove('active');
