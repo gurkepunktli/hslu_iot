@@ -56,12 +56,20 @@ A complete IoT bike tracking system with real-time GPS monitoring, theft detecti
 │   ├── app.js            # Application logic
 │   └── config.js         # Configuration
 │
-└── gateway/              # Raspberry Pi gateway code
-    ├── job_poller.py     # Job polling daemon
-    ├── mqtt_forwarder.py # MQTT → AWS IoT bridge
-    ├── gps_reader.py     # GPS reader (placeholder)
+├── gateway/              # Gateway Pi code
+│   ├── job_poller.py     # Job polling daemon (PI_ID: gateway)
+│   ├── mqtt_forwarder.py # MQTT → AWS IoT bridge
+│   ├── gps_reader.py     # GPS reader (placeholder)
+│   ├── setup_service.sh  # Automated systemd setup
+│   ├── requirements.txt  # Python dependencies
+│   └── README.md         # Gateway documentation
+│
+└── gps_pi/               # GPS Pi code
+    ├── job_poller.py     # Job polling daemon (PI_ID: pi9)
+    ├── mqtt_gps_reader.py# GPS MQTT publisher
+    ├── setup_service.sh  # Automated systemd setup
     ├── requirements.txt  # Python dependencies
-    └── README.md         # Gateway documentation
+    └── README.md         # GPS Pi documentation
 ```
 
 ## Quick Start
@@ -99,18 +107,54 @@ cd frontend
 # Deploy to any static hosting (Cloudflare Pages, Netlify, etc.)
 ```
 
-### 3. Gateway Setup (Raspberry Pi)
+### 3. GPS Pi Setup
 
 ```bash
-cd gateway
+# Copy files to GPS Pi
+scp -r gps_pi pi@<gps-pi-ip>:~/
+
+# SSH to GPS Pi
+ssh pi@<gps-pi-ip>
+cd ~/gps_pi
 
 # Install dependencies
 pip3 install -r requirements.txt
 
-# Configure API URL in job_poller.py
-# Start the poller
-python3 job_poller.py
+# Run automated setup (creates systemd service)
+chmod +x setup_service.sh
+./setup_service.sh
+
+# Verify service is running
+sudo systemctl status gps-poller
 ```
+
+### 4. Gateway Pi Setup
+
+```bash
+# Copy files to Gateway Pi
+scp -r gateway pi@172.30.2.50:~/
+
+# SSH to Gateway Pi
+ssh pi@172.30.2.50
+cd ~/gateway
+
+# Install dependencies
+pip3 install -r requirements.txt
+
+# Run automated setup (creates systemd service)
+chmod +x setup_service.sh
+./setup_service.sh
+
+# Verify service is running
+sudo systemctl status gateway-poller
+```
+
+### 5. Start System via Web UI
+
+1. Open frontend in browser
+2. Click **"Start System (GPS + MQTT)"** button
+3. Wait for status: "✓ System läuft (GPS + MQTT)"
+4. GPS data should now flow to the map!
 
 ## API Documentation
 
@@ -157,26 +201,49 @@ python3 job_poller.py
 
 ### Supported Job Types
 
-#### `gps_read`
-Execute GPS reading script.
+#### `start_gps_reader`
+Start GPS reader on GPS Pi (target: `pi9`).
 ```json
 {
-  "type": "gps_read",
-  "target": "gateway",
+  "type": "start_gps_reader",
+  "target": "pi9",
   "params": {
     "device": "pi9"
   }
 }
 ```
 
+**What it does:**
+- Starts `mqtt_gps_reader.py` in background
+- Reads GPS from `/dev/ttyS0`
+- Publishes to MQTT topic `gateway/pi9/gps`
+
 #### `mqtt_forward`
-Start MQTT forwarder daemon.
+Start MQTT forwarder on Gateway Pi (target: `gateway`).
 ```json
 {
   "type": "mqtt_forward",
   "target": "gateway",
   "params": {
     "script_path": "mqtt_forwarder.py"
+  }
+}
+```
+
+**What it does:**
+- Starts `mqtt_forwarder.py` in background
+- Subscribes to `gateway/#` on local broker
+- Forwards to AWS IoT as `sensors/#`
+- Rate limits to 1 msg/10s per topic
+
+#### `gps_read` (deprecated/placeholder)
+Legacy GPS read job type.
+```json
+{
+  "type": "gps_read",
+  "target": "gateway",
+  "params": {
+    "device": "pi9"
   }
 }
 ```
@@ -218,59 +285,98 @@ PI_ID = "gateway"
 POLL_INTERVAL = 5  # seconds
 ```
 
-## Gateway Job Poller
+## Job Pollers
 
-The job poller runs continuously on the Raspberry Pi and executes remote commands.
+Both Raspberry Pis run job poller daemons that listen for remote commands from the backend.
 
-### Starting the Poller
+### GPS Pi Job Poller
+
+Listens for jobs with `target: "pi9"`.
 
 ```bash
-# Foreground (for testing)
-python3 gateway/job_poller.py
+# Status
+sudo systemctl status gps-poller
 
-# Background
-nohup python3 gateway/job_poller.py > gateway.log 2>&1 &
+# Logs
+sudo journalctl -u gps-poller -f
 
-# Systemd service (recommended)
-sudo systemctl start gateway-poller
+# Manual start (testing)
+python3 ~/gps_pi/job_poller.py
 ```
 
-### Stopping the Poller
+**Stop methods:**
+1. **CTRL+C**: Press `Ctrl+C` in terminal
+2. **Stop File**: `touch /tmp/stop_gps_pi`
+3. **Kill Signal**: `kill -TERM <pid>`
 
-Three methods for graceful shutdown:
+### Gateway Pi Job Poller
 
+Listens for jobs with `target: "gateway"`.
+
+```bash
+# Status
+sudo systemctl status gateway-poller
+
+# Logs
+sudo journalctl -u gateway-poller -f
+
+# Manual start (testing)
+python3 ~/gateway/job_poller.py
+```
+
+**Stop methods:**
 1. **CTRL+C**: Press `Ctrl+C` in terminal
 2. **Stop File**: `touch /tmp/stop_gateway`
 3. **Kill Signal**: `kill -TERM <pid>`
 
 ### Job Execution Flow
 
+#### Single Button System Startup
+
 ```
 Frontend User
     │
-    ├─→ Click "GPS fix anfordern"
+    ├─→ Click "Start System (GPS + MQTT)"
     │
-    ├─→ POST /api/job (Backend)
+    ├─→ POST /api/job (type: start_gps_reader, target: pi9)
     │
     ├─→ Job stored in KV (job_id: abc-123)
     │
     ↓
-Gateway Pi
+GPS Pi Poller
     │
-    ├─→ GET /api/job/poll?pi_id=gateway
+    ├─→ GET /api/job/poll?pi_id=pi9
     │
-    ├─→ Receives job object
+    ├─→ Receives job → Starts mqtt_gps_reader.py
     │
-    ├─→ Executes Python script
-    │
-    ├─→ POST /api/job/result
+    ├─→ POST /api/job/result (status: done)
     │
     ↓
 Frontend
     │
-    ├─→ Polling GET /api/job/status
+    ├─→ Detects GPS job done
     │
-    └─→ Displays "GPS aktualisiert"
+    ├─→ POST /api/job (type: mqtt_forward, target: gateway)
+    │
+    ↓
+Gateway Pi Poller
+    │
+    ├─→ GET /api/job/poll?pi_id=gateway
+    │
+    ├─→ Receives job → Starts mqtt_forwarder.py
+    │
+    ├─→ POST /api/job/result (status: done)
+    │
+    ↓
+Frontend
+    │
+    └─→ Displays "✓ System läuft (GPS + MQTT)"
+```
+
+#### Data Flow After Startup
+
+```
+GPS Pi → MQTT (gateway/pi9/gps) → Gateway Pi → AWS IoT (sensors/pi9/gps) → DynamoDB → Backend API → Frontend Map
 ```
 
 ## MQTT Forwarder
@@ -343,17 +449,20 @@ curl "https://bike-api.your-account.workers.dev/api/job/status?job_id=<job_id>"
 
 ## Hardware Requirements
 
-### GPS Pi
-- Raspberry Pi (any model)
-- GPS module (UART/Serial)
+### GPS Pi (pi9)
+- Raspberry Pi Zero W or similar
+- GPS module (UART/Serial connected to `/dev/ttyS0`)
 - Python 3.7+
-- Serial port: `/dev/ttyS0`
+- Network connection to Gateway Pi (MQTT)
+- **Role**: Read GPS, publish to MQTT
 
-### Gateway Pi
+### Gateway Pi (172.30.2.50)
 - Raspberry Pi (any model)
-- Network connection
 - Python 3.7+
-- MQTT broker (Mosquitto)
+- Network connection (LAN/WLAN)
+- MQTT broker (Mosquitto) running locally
+- AWS IoT certificates in `/etc/mosquitto/certs/`
+- **Role**: MQTT bridge to AWS IoT Core
 
 ## Security
 
@@ -387,29 +496,83 @@ wrangler tail
 wrangler kv:namespace list
 ```
 
-### Gateway Issues
+### GPS Pi Issues
 
 **Job poller not receiving jobs:**
 ```bash
-# Check API connectivity
-curl "https://bike-api.your-account.workers.dev/api/job/poll?pi_id=gateway"
+# Check service status
+sudo systemctl status gps-poller
 
 # Check logs
-tail -f gateway.log
+sudo journalctl -u gps-poller -f
+
+# Test API connectivity
+curl "https://bike-api.dyntech.workers.dev/api/job/poll?pi_id=pi9"
+```
+
+**GPS not reading:**
+```bash
+# Check GPS module
+cat /dev/ttyS0
+# Should show NMEA sentences like $GNRMC,...
+
+# Check if GPS has fix (needs open sky view!)
+# Fix indicator in NMEA: $GNRMC,...,A,... (A = valid, V = invalid)
+```
+
+**GPS Reader not starting:**
+```bash
+# Check if script exists
+ls -la ~/gps_pi/mqtt_gps_reader.py
+
+# Check dependencies
+pip3 list | grep -E "paho-mqtt|pyserial"
+
+# Test manually
+python3 ~/gps_pi/mqtt_gps_reader.py
+```
+
+### Gateway Pi Issues
+
+**Job poller not receiving jobs:**
+```bash
+# Check service status
+sudo systemctl status gateway-poller
+
+# Check logs
+sudo journalctl -u gateway-poller -f
+
+# Test API connectivity
+curl "https://bike-api.dyntech.workers.dev/api/job/poll?pi_id=gateway"
 ```
 
 **MQTT forwarder fails:**
 ```bash
 # Verify certificates
 ls -l /etc/mosquitto/certs/
+# Should show: root-CA.crt, iot_gateway.cert.pem, iot_gateway.private.key
 
 # Test local MQTT broker
 mosquitto_sub -h 127.0.0.1 -t "gateway/#"
+# Should show messages from GPS Pi
 
 # Test AWS IoT connection
 openssl s_client -connect a217mym6eh7534-ats.iot.eu-central-1.amazonaws.com:8883 \
   -cert /etc/mosquitto/certs/iot_gateway.cert.pem \
   -key /etc/mosquitto/certs/iot_gateway.private.key
+# Should connect successfully
+```
+
+**MQTT Forwarder not starting:**
+```bash
+# Check if script exists
+ls -la ~/gateway/mqtt_forwarder.py
+
+# Check dependencies
+pip3 list | grep paho-mqtt
+
+# Test manually
+python3 ~/gateway/mqtt_forwarder.py
 ```
 
 ### Frontend Issues
@@ -419,10 +582,26 @@ openssl s_client -connect a217mym6eh7534-ats.iot.eu-central-1.amazonaws.com:8883
 - Verify API_URL in `config.js`
 - Check CORS headers in backend
 
-**Jobs not updating:**
-- Check job polling interval (2 seconds default)
-- Verify gateway is running and polling
-- Check job status API response
+**"Start System" button fails:**
+- Check both pollers are running:
+  - GPS Pi: `sudo systemctl status gps-poller`
+  - Gateway Pi: `sudo systemctl status gateway-poller`
+- Check job status in browser console (F12)
+- Verify targets in `config.js`:
+  - `GPS_PI_TARGET: 'pi9'`
+  - `GATEWAY_TARGET: 'gateway'`
+
+**System starts but no GPS data on map:**
+- Check GPS Pi has valid GPS fix (needs open sky!)
+- Check MQTT messages arriving on Gateway:
+  ```bash
+  mosquitto_sub -h 127.0.0.1 -t "gateway/#" -v
+  ```
+- Check DynamoDB table has recent entries
+- Check backend API returns position:
+  ```bash
+  curl https://bike-api.dyntech.workers.dev/api/position
+  ```
 
 ## Performance
 
