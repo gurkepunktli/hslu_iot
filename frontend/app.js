@@ -5,6 +5,7 @@
 let map, marker, trackLine;
 let isStolen = false;
 let lastPosition = null;
+let lastGpsFix = null; // Last valid GPS fix with coordinates
 const trackPoints = [];
 
 // Initialize map
@@ -74,6 +75,11 @@ async function updatePosition() {
         const hasValidCoords = lat != null && lon != null && !Number.isNaN(lat) && !Number.isNaN(lon);
         const isZeroCoords = lat === 0 && lon === 0;
 
+        // Update last update timestamp (any signal received)
+        if (hasConnection) {
+            updateLastUpdateTimestamp(data.ts);
+        }
+
         // Connection but no valid GPS fix
         if (hasConnection && (!hasValidCoords || isZeroCoords)) {
             setNoFixStatus();
@@ -90,6 +96,10 @@ async function updatePosition() {
         data.lon = lon;
 
         lastPosition = data;
+        lastGpsFix = data; // Store last valid GPS fix
+
+        // Update last GPS fix timestamp
+        updateLastFixTimestamp(data.ts);
         const latlng = [data.lat, data.lon];
         
         // Marker erstellen oder aktualisieren
@@ -166,22 +176,34 @@ async function updatePosition() {
     }
 }
 
-// UI mit Daten aktualisieren
-function updateUI(data) {
-    // Knoten zu km/h umrechnen
-    const speedKmh = (data.speed * 1.852).toFixed(1);
-    
-    document.getElementById('speed').textContent = `${speedKmh} km/h`;
-                        document.getElementById('course').textContent = (data.course?.toFixed(0) || 0) + '\u00B0';
-    document.getElementById('coords').textContent = `${data.lat.toFixed(5)}, ${data.lon.toFixed(5)}`;
-    
-    // Zeitstempel formatieren
-    if (data.ts) {
-        const date = new Date(parseInt(data.ts) || data.ts);
+// Update last update timestamp (any signal)
+function updateLastUpdateTimestamp(ts) {
+    if (ts) {
+        const date = new Date(parseInt(ts) || ts);
         const dateStr = date.toLocaleDateString('de-CH');
         const timeStr = date.toLocaleTimeString('de-CH');
         document.getElementById('lastUpdate').textContent = `${dateStr} ${timeStr}`;
     }
+}
+
+// Update last GPS fix timestamp (valid coordinates)
+function updateLastFixTimestamp(ts) {
+    if (ts) {
+        const date = new Date(parseInt(ts) || ts);
+        const dateStr = date.toLocaleDateString('de-CH');
+        const timeStr = date.toLocaleTimeString('de-CH');
+        document.getElementById('lastFix').textContent = `${dateStr} ${timeStr}`;
+    }
+}
+
+// UI mit Daten aktualisieren
+function updateUI(data) {
+    // Knoten zu km/h umrechnen
+    const speedKmh = (data.speed * 1.852).toFixed(1);
+
+    document.getElementById('speed').textContent = `${speedKmh} km/h`;
+    document.getElementById('course').textContent = (data.course?.toFixed(0) || 0) + '\u00B0';
+    document.getElementById('coords').textContent = `${data.lat.toFixed(5)}, ${data.lon.toFixed(5)}`;
 }
 
 // Online-Status setzen
