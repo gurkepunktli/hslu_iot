@@ -99,6 +99,11 @@ def execute_job(job):
             result = execute_gps_reader(params)
             status = "done"
             output = result
+        elif job_type == "stop_gps_reader":
+            # Stop GPS reader script
+            result = stop_gps_reader(params)
+            status = "done"
+            output = result
         else:
             # Unknown job type
             status = "failed"
@@ -150,6 +155,32 @@ def execute_gps_reader(params):
     print(f"[{datetime.now()}] GPS reader started with PID: {pid}")
 
     return f"GPS reader started successfully (PID: {pid})"
+
+
+def stop_gps_reader(params):
+    """Stop GPS reader script"""
+    print(f"[{datetime.now()}] Stopping GPS reader...")
+
+    try:
+        # Find and kill mqtt_gps_reader.py process
+        result = subprocess.run(
+            ["pkill", "-f", "mqtt_gps_reader.py"],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            print(f"[{datetime.now()}] GPS reader stopped successfully")
+            return "GPS reader stopped successfully"
+        elif result.returncode == 1:
+            print(f"[{datetime.now()}] No GPS reader process found")
+            return "No GPS reader process running"
+        else:
+            raise Exception(f"Failed to stop GPS reader: {result.stderr}")
+
+    except Exception as e:
+        print(f"[{datetime.now()}] Error stopping GPS reader: {e}")
+        raise
 
 
 def report_result(job_id, status, output, duration_ms):

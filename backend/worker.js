@@ -129,6 +129,34 @@ export default {
             return new Response(JSON.stringify({ stolen: false }), { headers: corsHeaders });
         }
 
+            // Route: POST /api/job/stop - Stop running scripts
+            if (url.pathname === '/api/job/stop' && request.method === 'POST') {
+                if (!env.JOB_QUEUE) {
+                    return new Response(
+                        JSON.stringify({ error: 'JOB_QUEUE not configured' }),
+                        { status: 500, headers: corsHeaders }
+                    );
+                }
+
+                const body = await request.json();
+                const { type = 'stop_all', target = 'gateway', params = {} } = body || {};
+
+                const jobId = crypto.randomUUID();
+                const job = {
+                    job_id: jobId,
+                    type,
+                    target,
+                    params,
+                    status: 'queued',
+                    created_at: Date.now()
+                };
+
+                await env.JOB_QUEUE.put(`job:${jobId}`, JSON.stringify(job), { expirationTtl: 3600 });
+                await env.JOB_QUEUE.put(`next:${target}`, jobId, { expirationTtl: 3600 });
+
+                return new Response(JSON.stringify({ job_id: jobId }), { headers: corsHeaders });
+            }
+
             // Route: POST /api/job - Job anlegen (Frontend-Button)
             if (url.pathname === '/api/job' && request.method === 'POST') {
                 if (!env.JOB_QUEUE) {
