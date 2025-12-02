@@ -367,11 +367,12 @@ async function toggleStolen() {
 function setSystemStatus(text, mode = 'muted') {
     const el = document.getElementById('systemStatus');
     if (!el) return;
-    el.textContent = text || '';
+    el.textContent = text || 'No current status';
     el.className = 'system-status';
     if (mode === 'ok') el.classList.add('ok');
     if (mode === 'warn') el.classList.add('warn');
     if (mode === 'alert') el.classList.add('alert');
+    if (mode === 'muted') el.classList.add('muted');
 }
 
 // System komplett starten (GPS Reader + MQTT Forwarder)
@@ -653,6 +654,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial button visibility
     updateButtonVisibility();
+
+    // Default system status
+    setSystemStatus('System idle', 'muted');
 
     // Regelmaessige Updates
     setInterval(updatePosition, CONFIG.UPDATE_INTERVAL);
