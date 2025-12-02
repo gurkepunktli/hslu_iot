@@ -123,61 +123,80 @@ def execute_job(job):
 
 
 def execute_gps_reader(params):
-    """Start GPS reader script in background"""
+    """Start GPS reader script via systemd service"""
     device = params.get("device", "pi9")
-    print(f"[{datetime.now()}] Starting GPS reader for device: {device}")
-
-    # Path to GPS reader script (adjust as needed)
-    gps_script = Path(__file__).parent / "mqtt_gps_reader.py"
-
-    if not gps_script.exists():
-        raise FileNotFoundError(f"GPS reader script not found: {gps_script}")
-
-    # Start the GPS reader in the background
-    process = subprocess.Popen(
-        [sys.executable, str(gps_script)],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
-
-    # Wait a moment to check if it started successfully
-    time.sleep(2)
-    poll_result = process.poll()
-
-    if poll_result is not None:
-        # Process already terminated (error)
-        stdout, stderr = process.communicate()
-        raise Exception(f"GPS reader failed to start: {stderr}")
-
-    # Process is still running
-    pid = process.pid
-    print(f"[{datetime.now()}] GPS reader started with PID: {pid}")
-
-    return f"GPS reader started successfully (PID: {pid})"
-
-
-def stop_gps_reader(params):
-    """Stop GPS reader script"""
-    print(f"[{datetime.now()}] Stopping GPS reader...")
+    print(f"[{datetime.now()}] Starting GPS reader service for device: {device}")
 
     try:
-        # Find and kill mqtt_gps_reader.py process
+        # Start the systemd service
         result = subprocess.run(
-            ["pkill", "-f", "mqtt_gps_reader.py"],
+            ["sudo", "systemctl", "start", "gps-reader"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        if result.returncode != 0:
+            raise Exception(f"Failed to start GPS reader service: {result.stderr}")
+
+        # Wait a moment for service to initialize
+        time.sleep(2)
+
+        # Check service status
+        status_result = subprocess.run(
+            ["systemctl", "is-active", "gps-reader"],
             capture_output=True,
             text=True
         )
 
-        if result.returncode == 0:
-            print(f"[{datetime.now()}] GPS reader stopped successfully")
-            return "GPS reader stopped successfully"
-        elif result.returncode == 1:
-            print(f"[{datetime.now()}] No GPS reader process found")
-            return "No GPS reader process running"
+        if status_result.stdout.strip() == "active":
+            print(f"[{datetime.now()}] GPS reader service started successfully")
+            return "GPS reader service started successfully"
         else:
-            raise Exception(f"Failed to stop GPS reader: {result.stderr}")
+            raise Exception(f"GPS reader service failed to start (status: {status_result.stdout.strip()})")
 
+    except subprocess.TimeoutExpired:
+        raise Exception("GPS reader service start timed out")
+    except Exception as e:
+        print(f"[{datetime.now()}] Error starting GPS reader: {e}")
+        raise
+
+
+def stop_gps_reader(params):
+    """Stop GPS reader service"""
+    print(f"[{datetime.now()}] Stopping GPS reader service...")
+
+    try:
+        # Stop the systemd service
+        result = subprocess.run(
+            ["sudo", "systemctl", "stop", "gps-reader"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        if result.returncode != 0:
+            raise Exception(f"Failed to stop GPS reader service: {result.stderr}")
+
+        # Wait a moment
+        time.sleep(1)
+
+        # Check service status
+        status_result = subprocess.run(
+            ["systemctl", "is-active", "gps-reader"],
+            capture_output=True,
+            text=True
+        )
+
+        status = status_result.stdout.strip()
+        if status in ["inactive", "failed"]:
+            print(f"[{datetime.now()}] GPS reader service stopped successfully")
+            return "GPS reader service stopped successfully"
+        else:
+            raise Exception(f"GPS reader service failed to stop (status: {status})")
+
+    except subprocess.TimeoutExpired:
+        raise Exception("GPS reader service stop timed out")
     except Exception as e:
         print(f"[{datetime.now()}] Error stopping GPS reader: {e}")
         raise

@@ -153,63 +153,80 @@ def execute_gps_read(params):
 
 
 def execute_mqtt_forwarder(params):
-    """Start MQTT forwarder script"""
+    """Start MQTT forwarder via systemd service"""
     script_path = params.get("script_path", "mqtt_forwarder.py")
-    print(f"[{datetime.now()}] Starting MQTT forwarder: {script_path}")
-
-    # Resolve script path
-    if not os.path.isabs(script_path):
-        # If relative path, look in the same directory as job_poller.py
-        script_path = Path(__file__).parent / script_path
-
-    if not os.path.exists(script_path):
-        raise FileNotFoundError(f"MQTT forwarder script not found: {script_path}")
-
-    # Start the MQTT forwarder in the background
-    process = subprocess.Popen(
-        [sys.executable, str(script_path)],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
-
-    # Wait a moment to check if it started successfully
-    time.sleep(2)
-    poll_result = process.poll()
-
-    if poll_result is not None:
-        # Process already terminated (error)
-        stdout, stderr = process.communicate()
-        raise Exception(f"MQTT forwarder failed to start: {stderr}")
-
-    # Process is still running
-    pid = process.pid
-    print(f"[{datetime.now()}] MQTT forwarder started with PID: {pid}")
-
-    return f"MQTT forwarder started successfully (PID: {pid})"
-
-
-def stop_mqtt_forwarder(params):
-    """Stop MQTT forwarder script"""
-    print(f"[{datetime.now()}] Stopping MQTT forwarder...")
+    print(f"[{datetime.now()}] Starting MQTT forwarder service")
 
     try:
-        # Find and kill mqtt_forwarder.py process
+        # Start the systemd service
         result = subprocess.run(
-            ["pkill", "-f", "mqtt_forwarder.py"],
+            ["sudo", "systemctl", "start", "mqtt-forwarder"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        if result.returncode != 0:
+            raise Exception(f"Failed to start MQTT forwarder service: {result.stderr}")
+
+        # Wait a moment for service to initialize
+        time.sleep(2)
+
+        # Check service status
+        status_result = subprocess.run(
+            ["systemctl", "is-active", "mqtt-forwarder"],
             capture_output=True,
             text=True
         )
 
-        if result.returncode == 0:
-            print(f"[{datetime.now()}] MQTT forwarder stopped successfully")
-            return "MQTT forwarder stopped successfully"
-        elif result.returncode == 1:
-            print(f"[{datetime.now()}] No MQTT forwarder process found")
-            return "No MQTT forwarder process running"
+        if status_result.stdout.strip() == "active":
+            print(f"[{datetime.now()}] MQTT forwarder service started successfully")
+            return "MQTT forwarder service started successfully"
         else:
-            raise Exception(f"Failed to stop MQTT forwarder: {result.stderr}")
+            raise Exception(f"MQTT forwarder service failed to start (status: {status_result.stdout.strip()})")
 
+    except subprocess.TimeoutExpired:
+        raise Exception("MQTT forwarder service start timed out")
+    except Exception as e:
+        print(f"[{datetime.now()}] Error starting MQTT forwarder: {e}")
+        raise
+
+
+def stop_mqtt_forwarder(params):
+    """Stop MQTT forwarder service"""
+    print(f"[{datetime.now()}] Stopping MQTT forwarder service...")
+
+    try:
+        # Stop the systemd service
+        result = subprocess.run(
+            ["sudo", "systemctl", "stop", "mqtt-forwarder"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        if result.returncode != 0:
+            raise Exception(f"Failed to stop MQTT forwarder service: {result.stderr}")
+
+        # Wait a moment
+        time.sleep(1)
+
+        # Check service status
+        status_result = subprocess.run(
+            ["systemctl", "is-active", "mqtt-forwarder"],
+            capture_output=True,
+            text=True
+        )
+
+        status = status_result.stdout.strip()
+        if status in ["inactive", "failed"]:
+            print(f"[{datetime.now()}] MQTT forwarder service stopped successfully")
+            return "MQTT forwarder service stopped successfully"
+        else:
+            raise Exception(f"MQTT forwarder service failed to stop (status: {status})")
+
+    except subprocess.TimeoutExpired:
+        raise Exception("MQTT forwarder service stop timed out")
     except Exception as e:
         print(f"[{datetime.now()}] Error stopping MQTT forwarder: {e}")
         raise
