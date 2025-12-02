@@ -63,14 +63,24 @@ export default {
             if (url.pathname === '/api/position' && request.method === 'GET') {
                 const device = url.searchParams.get('device') || 'pi9';
                 const data = await queryDynamoDB(config, device, MAX_SCAN);
-                
+
                 if (!data.Items || data.Items.length === 0) {
                     return new Response('{}', { headers: corsHeaders });
                 }
 
+                // Get latest valid position (with GPS fix)
                 const position = findLatestValidPosition(data.Items);
-                
-                return new Response(JSON.stringify(position), { headers: corsHeaders });
+
+                // Get latest entry overall (for last update timestamp)
+                const latestEntry = data.Items.length > 0 ? parseItem(data.Items[0]) : null;
+
+                // Combine both: position data from valid fix, but include last update timestamp
+                const result = {
+                    ...position,
+                    last_update_ts: latestEntry?.ts || position.ts
+                };
+
+                return new Response(JSON.stringify(result), { headers: corsHeaders });
             }
 
             // Route: GET /api/track - Letzte Positionen

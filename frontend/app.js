@@ -68,8 +68,12 @@ async function updatePosition() {
         const lat = typeof latRaw === 'string' ? parseFloat(latRaw) : latRaw;
         const lon = typeof lonRaw === 'string' ? parseFloat(lonRaw) : lonRaw;
 
+        // Use last_update_ts for last contact, ts for last GPS fix
+        const lastUpdateTs = data.last_update_ts || data.ts;
+        const lastFixTs = data.ts;
+
         // If we have a timestamp, we have connection
-        const hasConnection = data.ts != null && data.ts !== '';
+        const hasConnection = lastUpdateTs != null && lastUpdateTs !== '';
 
         // Check if coordinates are valid
         const hasValidCoords = lat != null && lon != null && !Number.isNaN(lat) && !Number.isNaN(lon);
@@ -77,7 +81,7 @@ async function updatePosition() {
 
         // Update last update timestamp (any signal received)
         if (hasConnection) {
-            updateLastUpdateTimestamp(data.ts);
+            updateLastUpdateTimestamp(lastUpdateTs);
         }
 
         // Connection but no valid GPS fix
@@ -99,7 +103,7 @@ async function updatePosition() {
         lastGpsFix = data; // Store last valid GPS fix
 
         // Update last GPS fix timestamp
-        updateLastFixTimestamp(data.ts);
+        updateLastFixTimestamp(lastFixTs);
         const latlng = [data.lat, data.lon];
         
         // Marker erstellen oder aktualisieren
