@@ -1,39 +1,40 @@
 // ============================================
-// KONFIGURATION - Hier anpassen!
+// CONFIGURATION
 // ============================================
 
 const CONFIG = {
-    // Dein Cloudflare Worker API Endpoint
-    // Nach dem Worker-Deployment hier eintragen, z.B.:
-    // API_URL: 'https://bike-api.dein-account.workers.dev'
+    // Cloudflare Worker API Endpoint
+    // Set this after worker deployment, e.g.:
+    // API_URL: 'https://bike-api.your-account.workers.dev'
     API_URL: 'https://bike-api.dyntech.workers.dev',
-    
-    // Geraete-ID (wie in DynamoDB)
+
+    // Device ID (as stored in DynamoDB)
     DEVICE_ID: 'pi9',
-    
-    // Update-Intervall in Millisekunden (3000 = 3 Sekunden)
-    UPDATE_INTERVAL: 3000,
-    
-    // Startposition der Karte (wird ueberschrieben sobald Daten da sind)
+
+    // Update interval in milliseconds (15000 = 15 seconds)
+    // Matches MQTT forwarder rate limit (10s) to avoid excessive polling
+    UPDATE_INTERVAL: 15000,
+
+    // Default map position (overridden when data is available)
     DEFAULT_LAT: 47.049,
     DEFAULT_LON: 8.305,
     DEFAULT_ZOOM: 15,
-    
-    // Track-Farben
-    TRACK_COLOR_NORMAL: '#3b82f6',  // Blau
-    TRACK_COLOR_STOLEN: '#ef4444',  // Rot
-    
-    // Maximale Track-Punkte (aeltere werden entfernt)
+
+    // Track colors
+    TRACK_COLOR_NORMAL: '#3b82f6',  // Blue
+    TRACK_COLOR_STOLEN: '#ef4444',  // Red
+
+    // Maximum track points (older points will be removed)
     MAX_TRACK_POINTS: 500,
 
-    // Wie viele Historienpunkte laden (fuer letzten Fix)
+    // How many history points to load (for last fix)
     HISTORY_LIMIT: 500,
 
-    // Staleness-Checks fuer Online-/GPS-Anzeige
-    STALE_UPDATE_MS: 60_000, // wie alt darf das letzte Signal sein, um als online zu gelten
-    STALE_FIX_MS: 120_000,   // wie alt darf der letzte GPS-Fix sein
+    // Staleness checks for online/GPS status
+    STALE_UPDATE_MS: 60_000, // How old can the last signal be to be considered online
+    STALE_FIX_MS: 120_000,   // How old can the last GPS fix be
 
-    // Job-/Polling-Einstellungen
+    // Job polling settings
     JOB_STATUS_POLL_MS: 2000,
     GATEWAY_TARGET: 'gateway',
     GPS_PI_TARGET: 'pi9'

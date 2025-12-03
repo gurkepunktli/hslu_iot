@@ -44,7 +44,7 @@ function initMap() {
     ).addTo(map);
 }
 
-// Fahrrad-Icon erstellen
+// Create bike icon
 function createBikeIcon(stolen = false) {
     return L.divIcon({
         className: 'bike-marker',
@@ -101,7 +101,7 @@ function addHistoryMarker(lat, lon, timestamp) {
     historyMarkers.push(marker);
 }
 
-// Position aktualisieren
+// Update position data
 async function updatePosition() {
     try {
         const res = await fetch(`${CONFIG.API_URL}/api/position?device=${CONFIG.DEVICE_ID}`);
@@ -111,7 +111,7 @@ async function updatePosition() {
 
         const data = await res.json();
 
-        // Loading ausblenden
+        // Hide loading indicator
         document.getElementById('loading').classList.add('hidden');
 
         const latRaw = data.lat;
@@ -179,13 +179,13 @@ async function updatePosition() {
         updateLastFixTimestamp(lastFixTs);
         const latlng = [data.lat, data.lon];
 
-        // Marker erstellen oder aktualisieren
+        // Create or update marker
         ensureMarker(data.lat, data.lon, data.stolen);
 
         // Add a history marker for this GPS fix
         addHistoryMarker(data.lat, data.lon, lastFixTs);
 
-        // Track aktualisieren
+        // Update track
         trackPoints.push(latlng);
         if (trackPoints.length > CONFIG.MAX_TRACK_POINTS) {
             trackPoints.shift();
@@ -206,13 +206,13 @@ async function updatePosition() {
             }).addTo(map);
         }
 
-        // UI aktualisieren
+        // Update UI
         updateUI(data);
 
         // Set status to online since we have fresh data
         setOnlineStatus();
 
-        // Diebstahl-Status aus /api/status holen (persistenter Zustand)
+        // Fetch theft status from /api/status (persistent state)
         try {
             const statusRes = await fetch(`${CONFIG.API_URL}/api/status?device=${CONFIG.DEVICE_ID}`);
             if (statusRes.ok) {
@@ -253,7 +253,7 @@ function updateLastFixTimestamp(ts) {
     }
 }
 
-// UI mit Daten aktualisieren
+// Update UI with data
 function updateUI(data) {
     const speedKnRaw = data.speed != null ? parseFloat(data.speed) : 0;
     const speedKn = Number.isFinite(speedKnRaw) ? speedKnRaw : 0;
@@ -266,7 +266,7 @@ function updateUI(data) {
     document.getElementById('coords').textContent = `${data.lat.toFixed(5)}, ${data.lon.toFixed(5)}`;
 }
 
-// Online-Status setzen
+// Set online status
 function setOnlineStatus(message) {
     currentStatus = 'online';
     if (isStolen) {
@@ -279,7 +279,7 @@ function setOnlineStatus(message) {
     // Don't auto-set systemRunning - user controls this with Start/Stop buttons
 }
 
-// Offline-Status setzen
+// Set offline status
 function setOfflineStatus(message) {
     currentStatus = 'offline';
     if (isStolen) {
@@ -318,7 +318,7 @@ function updateButtonVisibility() {
     }
 }
 
-// Hauptstatus (Badge) setzen
+// Set main status (badge)
 function setMainStatus(state, title, subtitle) {
     const text = document.getElementById('statusText');
     const sub = document.getElementById('statusSub');
@@ -350,7 +350,7 @@ function setMainStatus(state, title, subtitle) {
     }
 }
 
-// Status-Lampe setzen
+// Set status lamp
 function setLamp(id, state, valueText) {
     const lamp = document.getElementById(id);
     const value = document.getElementById(`${id}Text`);
@@ -359,7 +359,7 @@ function setLamp(id, state, valueText) {
     if (value) value.textContent = valueText || '--';
 }
 
-// Diebstahl-UI aktualisieren
+// Update theft UI
 function updateStolenUI(stolen) {
     isStolen = stolen;
 
@@ -381,7 +381,7 @@ function updateStolenUI(stolen) {
     }
 }
 
-// Diebstahl melden / Entwarnung
+// Report theft / Clear alert
 async function toggleStolen() {
     const pin = prompt('Enter security PIN:');
     if (!pin) return;
@@ -441,7 +441,7 @@ function setSystemStatus(text, mode = 'muted') {
     el.className = `${base} ${variant}`;
 }
 
-// System komplett starten (GPS Reader + MQTT Forwarder)
+// Start complete system (GPS Reader + MQTT Forwarder)
 async function startSystem() {
     const btn = document.getElementById('btnStartSystem');
     const updateCircle = document.getElementById('updateCircle');
@@ -627,7 +627,7 @@ async function stopSystem() {
     }
 }
 
-// Hilfsfunktion: Warte auf Job-Completion
+// Helper function: Wait for job completion
 async function waitForJob(jobId, timeoutSeconds = 30) {
     return new Promise((resolve) => {
         let attempts = 0;
@@ -705,7 +705,7 @@ function ensureMarker(lat, lon, stolenFlag) {
     }
 }
 
-// Historie laden
+// Load history
 async function loadHistory() {
     try {
         const limit = CONFIG.HISTORY_LIMIT || 500;
@@ -841,7 +841,7 @@ async function checkSystemStatus() {
     }
 }
 
-// App starten
+// Start app
 document.addEventListener('DOMContentLoaded', async () => {
     initMap();
     loadHistory();
