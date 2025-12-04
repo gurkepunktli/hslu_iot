@@ -19,6 +19,7 @@
 // Fallback-Konfiguration, falls Cloudflare-Variablen nicht verfügbar sind.
 // Trage hier die Werte ein, falls sie nicht als Env-Variablen gesetzt werden können.
 const DEFAULT_REGION = 'eu-central-1';
+const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1446116774998179861/elv96aMUltKQtfLIkTDdmVGzzQXpM3nJAkN193eMmZ5LHFy4FqTHHXzkJxDT3TZTH5Yo';
 
 function buildConfig(env) {
     const accessKey = env?.AWS_ACCESS_KEY;
@@ -108,7 +109,7 @@ export default {
                 // PIN prüfen
                 if (pin !== config.ADMIN_PIN) {
                     return new Response(
-                        JSON.stringify({ error: 'Ungültiger PIN' }), 
+                        JSON.stringify({ error: 'Ungültiger PIN' }),
                         { status: 401, headers: corsHeaders }
                     );
                 }
@@ -120,8 +121,47 @@ export default {
                     timestamp: new Date().toISOString()
                 }));
 
+                // Send Discord notification
+                try {
+                    const embed = {
+                        title: stolen ? '🚨 BIKE STOLEN!' : '✅ Bike Recovered',
+                        description: stolen
+                            ? `⚠️ Bike **${device}** has been reported as stolen!`
+                            : `🎉 Bike **${device}** has been recovered and unlocked.`,
+                        color: stolen ? 0xef4444 : 0x10b981, // Red for stolen, green for recovered
+                        timestamp: new Date().toISOString(),
+                        fields: [
+                            {
+                                name: 'Device ID',
+                                value: device,
+                                inline: true
+                            },
+                            {
+                                name: 'Status',
+                                value: stolen ? 'STOLEN' : 'Safe',
+                                inline: true
+                            }
+                        ],
+                        footer: {
+                            text: 'Bike Tracker Alert System'
+                        }
+                    };
+
+                    await fetch(DISCORD_WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            username: 'Bike Tracker',
+                            embeds: [embed]
+                        })
+                    });
+                } catch (discordError) {
+                    console.error('Discord webhook failed:', discordError);
+                    // Don't fail the whole request if Discord fails
+                }
+
                 return new Response(
-                    JSON.stringify({ success: true, stolen: stolen }), 
+                    JSON.stringify({ success: true, stolen: stolen }),
                     { headers: corsHeaders }
                 );
             }
