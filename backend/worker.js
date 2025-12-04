@@ -121,8 +121,66 @@ export default {
                     timestamp: new Date().toISOString()
                 }));
 
+                // Get last known GPS position for Discord notification
+                let gpsData = null;
+                try {
+                    const posData = await queryDynamoDB(config, device, MAX_SCAN);
+                    if (posData.Items && posData.Items.length > 0) {
+                        gpsData = findLatestValidPosition(posData.Items);
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch GPS data for Discord:', err);
+                }
+
                 // Send Discord notification
                 try {
+                    const fields = [
+                        {
+                            name: 'Device ID',
+                            value: device,
+                            inline: true
+                        },
+                        {
+                            name: 'Status',
+                            value: stolen ? 'STOLEN' : 'Safe',
+                            inline: true
+                        }
+                    ];
+
+                    // Add GPS location if available
+                    if (gpsData && gpsData.lat && gpsData.lon) {
+                        const lat = gpsData.lat;
+                        const lon = gpsData.lon;
+                        const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+
+                        // Format timestamp
+                        let timeStr = 'Unknown';
+                        if (gpsData.ts) {
+                            const ts = typeof gpsData.ts === 'string' ? parseInt(gpsData.ts) : gpsData.ts;
+                            const date = new Date(ts);
+                            timeStr = date.toLocaleString('de-CH', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
+                            });
+                        }
+
+                        fields.push({
+                            name: '📍 Last Known Position',
+                            value: `[${lat.toFixed(5)}, ${lon.toFixed(5)}](${googleMapsUrl})\n🕒 ${timeStr}`,
+                            inline: false
+                        });
+                    } else {
+                        fields.push({
+                            name: '📍 GPS Position',
+                            value: 'No GPS data available',
+                            inline: false
+                        });
+                    }
+
                     const embed = {
                         title: stolen ? '🚨 BIKE STOLEN!' : '✅ Bike Recovered',
                         description: stolen
@@ -130,18 +188,7 @@ export default {
                             : `🎉 Bike **${device}** has been recovered and unlocked.`,
                         color: stolen ? 0xef4444 : 0x10b981, // Red for stolen, green for recovered
                         timestamp: new Date().toISOString(),
-                        fields: [
-                            {
-                                name: 'Device ID',
-                                value: device,
-                                inline: true
-                            },
-                            {
-                                name: 'Status',
-                                value: stolen ? 'STOLEN' : 'Safe',
-                                inline: true
-                            }
-                        ],
+                        fields: fields,
                         footer: {
                             text: 'Bike Tracker Alert System'
                         }
