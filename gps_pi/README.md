@@ -5,8 +5,10 @@ This directory contains the GPS Pi code that polls the backend for jobs and cont
 ## Files
 
 - `job_poller.py` - Main polling script for GPS Pi
-- `mqtt_gps_reader.py` - GPS reader that publishes to MQTT
+- `mqtt_gps_reader.py` - Simple GPS reader (deprecated, see note below)
 - `requirements.txt` - Python dependencies
+
+**Note:** The actual GPS reader used in production is `/home/iotlabpi4/programs/project/GpsTransmitter.py` on the Pi, which includes OLED display and button support. It sends GPS data with `long` instead of `lon` field.
 
 ## Setup on GPS Pi
 
@@ -79,7 +81,32 @@ pkill -TERM -f "job_poller.py"
 pkill -f "mqtt_gps_reader.py"
 ```
 
-## Systemd Service (Optional)
+## Systemd Services
+
+### GPS Reader Service
+
+The systemd service `/etc/systemd/system/gps-reader.service` should point to the production GPS script:
+
+```ini
+[Unit]
+Description=GPS Reader Service for Pi9
+After=network.target
+
+[Service]
+Type=simple
+User=iotlabpi4
+WorkingDirectory=/home/iotlabpi4/programs/project
+ExecStart=/usr/bin/python3 /home/iotlabpi4/programs/project/GpsTransmitter.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### Job Poller Service (Optional)
 
 Create `/etc/systemd/system/gps-poller.service`:
 
@@ -90,9 +117,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/gps_pi
-ExecStart=/usr/bin/python3 /home/pi/gps_pi/job_poller.py
+User=iotlabpi4
+WorkingDirectory=/home/iotlabpi4/gps_pi
+ExecStart=/usr/bin/python3 /home/iotlabpi4/gps_pi/job_poller.py
 Restart=always
 RestartSec=10
 
@@ -103,8 +130,8 @@ WantedBy=multi-user.target
 Enable:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable gps-poller
-sudo systemctl start gps-poller
+sudo systemctl enable gps-poller gps-reader
+sudo systemctl start gps-poller gps-reader
 ```
 
 ## Troubleshooting

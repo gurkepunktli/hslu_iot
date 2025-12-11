@@ -503,10 +503,21 @@ async function sha256(message) {
 function parseItem(item) {
     try {
         const payload = item.payload?.M || item.payload || item;
-        
+
+        // Support both formats:
+        // - Original: lon, speed_kn, course_deg
+        // - Alternative: long (instead of lon), no speed/course
+        const lon = parseFloat(
+            payload?.lon?.N ?? payload?.lon ??
+            payload?.long?.N ?? payload?.long ??
+            item.lon?.N ?? item.lon ??
+            item.long?.N ?? item.long ??
+            0
+        );
+
         return {
             lat: parseFloat(payload?.lat?.N ?? payload?.lat ?? item.lat?.N ?? item.lat ?? 0),
-            lon: parseFloat(payload?.lon?.N ?? payload?.lon ?? item.lon?.N ?? item.lon ?? 0),
+            lon: lon,
             speed: parseFloat(payload?.speed_kn?.N ?? payload?.speed_kn ?? item.speed_kn?.N ?? item.speed_kn ?? 0),
             course: parseFloat(payload?.course_deg?.N ?? payload?.course_deg ?? item.course_deg?.N ?? item.course_deg ?? 0),
             fix: payload?.fix?.BOOL ?? payload?.fix ?? item.fix?.BOOL ?? item.fix,

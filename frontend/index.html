@@ -121,24 +121,21 @@
                 </div>
 
             <div class="flex items-center justify-between rounded-2xl text-white px-5 py-4 shadow-lg transition-all duration-300" id="statusBadge">
-                <div class="flex-1">
-                    <div class="text-lg font-bold" id="statusText">Connecting...</div>
-                    <div class="text-xs opacity-85" id="statusSub">Waiting for first signal</div>
-                </div>
                 <div class="flex items-center gap-4">
-                    <svg class="animate-spin h-5 w-5 hidden" id="statusLoadingSpinner" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="60" stroke-linecap="round"></circle>
-                    </svg>
-                    <div class="update-circle opacity-80" id="updateCircle" title="Auto-refresh countdown">
-                        <svg viewBox="0 0 24 24">
-                            <circle class="bg" cx="12" cy="12" r="10"/>
-                            <circle class="progress" cx="12" cy="12" r="10" id="updateProgress"/>
-                        </svg>
-                    </div>
                     <div class="relative">
                         <div class="badge-dot" id="statusDot"></div>
                         <div class="pulse-ring absolute inset-0 hidden" id="liveIndicator"></div>
                     </div>
+                    <div class="flex-1">
+                        <div class="text-lg font-bold" id="statusText">Connecting...</div>
+                        <div class="text-xs opacity-85" id="statusSub">Waiting for first signal</div>
+                    </div>
+                </div>
+                <div class="update-circle opacity-80" id="updateCircle" title="Auto-refresh countdown">
+                    <svg viewBox="0 0 24 24">
+                        <circle class="bg" cx="12" cy="12" r="10"/>
+                        <circle class="progress" cx="12" cy="12" r="10" id="updateProgress"/>
+                    </svg>
                 </div>
             </div>
 
