@@ -9,7 +9,11 @@ This directory contains the GPS Pi code that polls the backend for jobs and cont
 - `GpsTransmitter.py` - OLED-enabled GPS sender (publishes always with fix true/false)
 - `requirements.txt` - Python dependencies
 
-**Note:** The actual GPS reader used in production is `/home/iotlabpi4/programs/project/GpsTransmitter.py` on the Pi, which includes OLED display and button support. It sends GPS data with `long` instead of `lon` field.
+**Note:** The actual GPS reader used in production is `/home/iotlabpi4/programs/project/GpsTransmitter.py` on the Pi, which includes:
+- OLED display and button support for lockmode
+- Subscribes to `bike/light` topic to adjust display brightness based on ambient light
+- Sends GPS data with `long` instead of `lon` field
+- Includes `brightness` field (received from Light Pi) in GPS payload
 
 ## Setup on GPS Pi
 

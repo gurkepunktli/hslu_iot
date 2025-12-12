@@ -55,8 +55,11 @@
 
 ```mermaid
 graph TB
-    A[GPS Pi<br/>pi9] -->|MQTT Local<br/>gateway/pi9/gps| B[Gateway Pi<br/>172.30.2.50]
+    A[GPS Pi<br/>pi9] -->|MQTT Local<br/>gps| B[Gateway Pi<br/>172.30.2.50]
+    L[Light Pi<br/>lightpi] -->|MQTT Local<br/>bike/light| B
+    L -.->|brightness<br/>dark/bright| A
     B -->|MQTT TLS<br/>sensors/pi9/gps| C[AWS IoT Core]
+    B -->|MQTT TLS<br/>sensors/light/brightness| C
     C -->|Store| D[DynamoDB<br/>gpshistory]
     D -->|Read| E[Cloudflare Worker<br/>bike-api]
     E -->|REST API| F[Web Dashboard<br/>Frontend]
@@ -64,8 +67,10 @@ graph TB
     F -.->|Remote Jobs<br/>Start/Stop| E
     E -.->|Job Queue<br/>KV Store| B
     E -.->|Job Queue<br/>KV Store| A
+    E -.->|Job Queue<br/>KV Store| L
 
     style A fill:#10b981,stroke:#059669,stroke-width:3px,color:#fff
+    style L fill:#fbbf24,stroke:#f59e0b,stroke-width:3px,color:#fff
     style B fill:#3b82f6,stroke:#2563eb,stroke-width:3px,color:#fff
     style C fill:#f59e0b,stroke:#d97706,stroke-width:3px,color:#fff
     style D fill:#8b5cf6,stroke:#7c3aed,stroke-width:3px,color:#fff
@@ -76,9 +81,15 @@ graph TB
 ### Data Flow
 
 ```
-GPS Pi → MQTT (gateway/pi9/gps)
+Light Pi → MQTT (bike/light) → Gateway Broker
+                              ↓
+GPS Pi ← subscribes ─────────┘
+  ↓
+GPS Pi → MQTT (gps) with brightness field
     → Gateway Pi → AWS IoT (sensors/pi9/gps)
-    → DynamoDB → Backend API → Frontend Map
+    → DynamoDB (gpshistory) → Backend API → Frontend Map
+
+Light Pi brightness data is embedded in GPS payload
 ```
 
 ---

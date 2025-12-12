@@ -6,7 +6,7 @@ This directory contains the Raspberry Pi gateway code that polls the backend for
 
 - `job_poller.py` - Main polling script that runs continuously
 - `gps_reader.py` - GPS reading script (placeholder - needs implementation)
-- `mqtt_forwarder.py` - MQTT forwarder that bridges local broker to AWS IoT Core
+- `mqtt_forwarder.py` - MQTT forwarder that bridges local broker to AWS IoT Core **with integrated theft detection**
 - `requirements.txt` - Python dependencies
 
 ## Setup on Raspberry Pi
@@ -156,10 +156,23 @@ Starts the `mqtt_forwarder.py` script in the background to forward MQTT messages
 ```
 
 The MQTT forwarder:
-- Subscribes to `gateway/#` on local broker (127.0.0.1:1883)
+- Subscribes to multiple topics on local broker (127.0.0.1:1883):
+  - `gateway/#` → forwards to `sensors/*`
+  - `gps` (GPS Pi legacy) → forwards to `sensors/pi9/gps`
+  - `bike/light` (Light Pi) → forwards to `sensors/light/brightness`
 - Forwards messages to AWS IoT Core with TLS authentication
-- Maps topics: `gateway/*` → `sensors/*`
 - Rate limits to 1 message per 10 seconds per topic
+- **Integrated theft detection**:
+  - Monitors GPS data for movement while in lockmode
+  - Sends Discord webhook alert if bike moves > 50m while locked
+  - Automatically resets when lockmode is disabled
+
+**Configuration:**
+Edit `mqtt_forwarder.py` to set your Discord webhook URL:
+```python
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
+THEFT_DISTANCE_THRESHOLD = 50  # meters
+```
 
 **Certificate requirements:**
 - `/etc/mosquitto/certs/root-CA.crt`

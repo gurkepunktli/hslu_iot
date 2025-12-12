@@ -38,6 +38,9 @@ DEVICE_ID = "pi9"
 # ---- Display brightness state (shared between threads) ----
 display_state = {"contrast": 255, "lock": threading.Lock()}
 
+# ---- Current ambient brightness from Light Pi (shared between threads) ----
+ambient_brightness = {"value": "unknown", "lock": threading.Lock()}
+
 
 # ---- MQTT Callbacks ----
 def on_connect(client, userdata, flags, reason_code, properties):
@@ -57,6 +60,11 @@ def on_message(client, userdata, msg):
             elif brightness == "bright":
                 display_state["contrast"] = 255  # High contrast for bright conditions
                 print("[MQTT] Brightness: BRIGHT - Setting high contrast")
+
+        # Store ambient brightness for GPS payload
+        with ambient_brightness["lock"]:
+            ambient_brightness["value"] = brightness
+            print(f"[MQTT] Stored ambient brightness: {brightness}")
     except Exception as e:
         print(f"Error processing brightness message: {e}")
 
@@ -182,6 +190,10 @@ try:
         display.show()
 
         # ---- Send to Gateway (immer mit ts + fix) ----
+        # Get current brightness value (thread-safe)
+        with ambient_brightness["lock"]:
+            current_brightness = ambient_brightness["value"]
+
         payload = {
             "device": DEVICE_ID,
             "ts": int(time.time() * 1000),
@@ -190,6 +202,7 @@ try:
             "long": lon,
             "alt": alt,
             "lockmode": lockmode,
+            "brightness": current_brightness,  # from Light Pi
             "nmea": line.strip() if line else "",
         }
         if speed:
