@@ -37,5 +37,6 @@ const CONFIG = {
     // Job polling settings
     JOB_STATUS_POLL_MS: 2000,
     GATEWAY_TARGET: 'gateway',
-    GPS_PI_TARGET: 'pi9'
+    GPS_PI_TARGET: 'pi9',
+    LIGHT_TARGET: 'lightpi' // rear light controller Pi
 };

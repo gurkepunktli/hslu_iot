@@ -518,6 +518,38 @@ async function startSystem() {
             }
         }
 
+        // Step 3: Optional rear light module
+        if (CONFIG.LIGHT_TARGET) {
+            setSystemStatus('Starting rear light module... (timeout: 20s)', 'warn');
+
+            const lightRes = await fetch(`${CONFIG.API_URL}/api/job`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'start_light_module',
+                    target: CONFIG.LIGHT_TARGET,
+                    params: {}
+                })
+            });
+
+            if (!lightRes.ok) {
+                throw new Error(`Light module job failed: HTTP ${lightRes.status}`);
+            }
+
+            const lightData = await lightRes.json();
+            const lightJobId = lightData.job_id;
+
+            const lightResult = await waitForJob(lightJobId, 20);
+
+            if (!lightResult.success) {
+                if (lightResult.error === 'timeout') {
+                    throw new Error('Light module unreachable (timeout after 20s)');
+                } else {
+                    throw new Error(`Light module failed: ${lightResult.message}`);
+                }
+            }
+        }
+
         setSystemStatus('✓ System running (GPS + MQTT)', 'ok');
         btn.disabled = false;
         btn.textContent = 'Start system';
@@ -576,6 +608,38 @@ async function stopSystem() {
                 throw new Error('Gateway unreachable (timeout after 20s)');
             } else {
                 throw new Error(`MQTT stop failed: ${mqttResult.message}`);
+            }
+        }
+
+        // Optional: stop rear light module first
+        if (CONFIG.LIGHT_TARGET) {
+            setSystemStatus('Stopping rear light... (timeout: 20s)', 'warn');
+
+            const lightRes = await fetch(`${CONFIG.API_URL}/api/job`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'stop_light_module',
+                    target: CONFIG.LIGHT_TARGET,
+                    params: {}
+                })
+            });
+
+            if (!lightRes.ok) {
+                throw new Error(`Light stop failed: HTTP ${lightRes.status}`);
+            }
+
+            const lightData = await lightRes.json();
+            const lightJobId = lightData.job_id;
+
+            const lightResult = await waitForJob(lightJobId, 20);
+
+            if (!lightResult.success) {
+                if (lightResult.error === 'timeout') {
+                    throw new Error('Light module unreachable (timeout after 20s)');
+                } else {
+                    throw new Error(`Light stop failed: ${lightResult.message}`);
+                }
             }
         }
 
