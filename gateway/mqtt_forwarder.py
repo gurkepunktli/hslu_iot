@@ -43,8 +43,8 @@ REMOTE_PREFIX_OUT = "sensors/"
 MIN_INTERVAL_SEC = 10
 
 # ---- Theft Detection Config ----
-THEFT_DISTANCE_THRESHOLD = 50  # meters
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"  # Replace with your webhook URL
+THEFT_DISTANCE_THRESHOLD = 10  # meters
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1446116774998179861/elv96aMUltKQtfLIkTDdmVGzzQXpM3nJAkN193eMmZ5LHFy4FqTHHXzkJxDT3TZTH5Yo"
 
 aws_client = None
 last_forward = {}  # remote_topic -> timestamp der letzten Weiterleitung
