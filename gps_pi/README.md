@@ -6,6 +6,7 @@ This directory contains the GPS Pi code that polls the backend for jobs and cont
 
 - `job_poller.py` - Main polling script for GPS Pi
 - `mqtt_gps_reader.py` - Simple GPS reader (deprecated, see note below)
+- `GpsTransmitter.py` - OLED-enabled GPS sender (publishes always with fix true/false)
 - `requirements.txt` - Python dependencies
 
 **Note:** The actual GPS reader used in production is `/home/iotlabpi4/programs/project/GpsTransmitter.py` on the Pi, which includes OLED display and button support. It sends GPS data with `long` instead of `lon` field.
@@ -36,10 +37,13 @@ PI_ID = "pi9"
 POLL_INTERVAL = 5
 ```
 
-Check `mqtt_gps_reader.py`:
+Check `mqtt_gps_reader.py` (legacy) or `GpsTransmitter.py` (OLED):
 ```python
-GATEWAY_IP = "172.30.2.50"
-GATEWAY_PORT = 1883
+MQTT_HOST = "172.30.2.50"
+MQTT_PORT = 1883
+MQTT_TOPIC = "gateway/pi9/gps"  # expected by gateway forwarder
+DEVICE_ID = "pi9"
+
 GPS_PORT = "/dev/ttyS0"  # Adjust if needed
 GPS_BAUD = 9600
 ```
@@ -79,6 +83,7 @@ pkill -TERM -f "job_poller.py"
 ### Stop GPS Reader
 ```bash
 pkill -f "mqtt_gps_reader.py"
+pkill -f "GpsTransmitter.py"
 ```
 
 ## Systemd Services
