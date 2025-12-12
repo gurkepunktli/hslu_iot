@@ -173,6 +173,11 @@ def on_local_message(client, userdata, msg):
             fix = gps_data.get("fix", False)
 
             check_theft(device_id, lat, lon, lockmode, fix)
+
+            # Rename "long" to "lon" for AWS IoT Rule compatibility
+            if "long" in gps_data:
+                gps_data["lon"] = gps_data.pop("long")
+                payload = json.dumps(gps_data).encode()
         except:
             pass  # Ignore parsing errors, continue with forwarding
 
