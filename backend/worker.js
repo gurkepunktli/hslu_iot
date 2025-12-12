@@ -69,16 +69,18 @@ export default {
                     return new Response('{}', { headers: corsHeaders });
                 }
 
-                // Get latest valid position (with GPS fix)
-                const position = findLatestValidPosition(data.Items);
-
-                // Get latest entry overall (for last update timestamp)
+                // Parse newest entry (could be without fix/coords)
                 const latestEntry = data.Items.length > 0 ? parseItem(data.Items[0]) : null;
+                // Fallback to newest valid position (with fix) for coords if available
+                const fallbackPosition = findLatestValidPosition(data.Items);
 
-                // Combine both: position data from valid fix, but include last update timestamp
+                // Combine: prefer newest entry (even ohne Fix), but backfill coords from last valid fix
                 const result = {
-                    ...position,
-                    last_update_ts: latestEntry?.ts || position.ts
+                    ...latestEntry,
+                    ...(latestEntry && Number.isFinite(latestEntry.lat) && Number.isFinite(latestEntry.lon)
+                        ? {}
+                        : fallbackPosition),
+                    last_update_ts: latestEntry?.ts || fallbackPosition?.ts
                 };
 
                 return new Response(JSON.stringify(result), { headers: corsHeaders });
@@ -90,14 +92,14 @@ export default {
                 const limit = parseInt(url.searchParams.get('limit')) || 100;
                 
                 const data = await queryDynamoDB(config, device, limit);
-                
+
                 if (!data.Items) {
                     return new Response('[]', { headers: corsHeaders });
                 }
 
+                // Liefere komplette Historie, auch ohne GPS-Fix, damit UI Offline/Nofix anzeigen kann
                 const points = data.Items
-                    .map(parseItem)
-                    .filter(isValidPosition);
+                    .map(parseItem);
                 return new Response(JSON.stringify(points), { headers: corsHeaders });
             }
 
