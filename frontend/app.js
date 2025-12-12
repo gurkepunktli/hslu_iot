@@ -757,6 +757,123 @@ function toMs(ts) {
     return isNaN(parsed) ? null : parsed;
 }
 
+// Haversine formula to calculate distance between two GPS coordinates in kilometers
+function haversineDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth's radius in km
+    const toRad = (deg) => deg * (Math.PI / 180);
+
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+
+    return distance;
+}
+
+// Calculate trip statistics for the last 24 hours
+async function calculateTripStats() {
+    try {
+        const limit = CONFIG.HISTORY_LIMIT || 500;
+        const res = await fetch(`${CONFIG.API_URL}/api/track?device=${CONFIG.DEVICE_ID}&limit=${limit}`);
+
+        if (!res.ok) {
+            updateStatsUI(null);
+            return;
+        }
+
+        const dataRaw = await res.json();
+        const data = Array.isArray(dataRaw) ? dataRaw.map(normalizePoint) : [];
+
+        if (!Array.isArray(data) || data.length === 0) {
+            updateStatsUI(null);
+            return;
+        }
+
+        // Filter for last 24 hours
+        const now = Date.now();
+        const last24h = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+        const recentPoints = data.filter(p => {
+            if (!isValidFix(p) || !p.ts) return false;
+            const pointTime = toMs(p.ts);
+            if (!pointTime) return false;
+            return (now - pointTime) <= last24h;
+        });
+
+        if (recentPoints.length === 0) {
+            updateStatsUI(null);
+            return;
+        }
+
+        // Calculate total distance using Haversine formula
+        let totalDistance = 0;
+        for (let i = 0; i < recentPoints.length - 1; i++) {
+            const p1 = recentPoints[i];
+            const p2 = recentPoints[i + 1];
+            totalDistance += haversineDistance(p1.lat, p1.lon, p2.lat, p2.lon);
+        }
+
+        // Calculate average speed (convert from knots to km/h)
+        const speedValues = recentPoints
+            .map(p => p.speed != null ? parseFloat(p.speed) : 0)
+            .filter(s => Number.isFinite(s) && s > 0);
+
+        const avgSpeedKnots = speedValues.length > 0
+            ? speedValues.reduce((sum, s) => sum + s, 0) / speedValues.length
+            : 0;
+        const avgSpeedKmh = avgSpeedKnots * 1.852;
+
+        // Calculate max speed (convert from knots to km/h)
+        const maxSpeedKnots = speedValues.length > 0
+            ? Math.max(...speedValues)
+            : 0;
+        const maxSpeedKmh = maxSpeedKnots * 1.852;
+
+        updateStatsUI({
+            distance: totalDistance,
+            avgSpeed: avgSpeedKmh,
+            maxSpeed: maxSpeedKmh
+        });
+
+    } catch (err) {
+        console.error('Failed to calculate trip stats:', err);
+        updateStatsUI(null);
+    }
+}
+
+// Update the statistics UI
+function updateStatsUI(stats) {
+    const distanceEl = document.getElementById('stat-distance');
+    const avgSpeedEl = document.getElementById('stat-avg-speed');
+    const maxSpeedEl = document.getElementById('stat-max-speed');
+
+    if (!stats || stats.distance === 0) {
+        if (distanceEl) distanceEl.textContent = '--';
+        if (avgSpeedEl) avgSpeedEl.textContent = '--';
+        if (maxSpeedEl) maxSpeedEl.textContent = '--';
+        return;
+    }
+
+    if (distanceEl) {
+        distanceEl.textContent = stats.distance >= 1
+            ? `${stats.distance.toFixed(1)} km`
+            : `${(stats.distance * 1000).toFixed(0)} m`;
+    }
+
+    if (avgSpeedEl) {
+        avgSpeedEl.textContent = `${stats.avgSpeed.toFixed(1)} km/h`;
+    }
+
+    if (maxSpeedEl) {
+        maxSpeedEl.textContent = `${stats.maxSpeed.toFixed(1)} km/h`;
+    }
+}
+
 function ensureMarker(lat, lon, stolenFlag) {
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
     const latlng = [lat, lon];
@@ -910,6 +1027,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initMap();
     loadHistory();
     updatePosition();
+    calculateTripStats(); // Initial trip stats calculation
 
     // Check if system is already running (wait for it to complete)
     await checkSystemStatus();
@@ -928,6 +1046,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Regular updates
     setInterval(() => {
         updatePosition();
+        calculateTripStats(); // Update trip stats on each interval
         startUpdateCountdown(); // Restart countdown on each update
     }, CONFIG.UPDATE_INTERVAL);
 });
