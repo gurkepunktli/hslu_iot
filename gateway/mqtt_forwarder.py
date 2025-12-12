@@ -19,6 +19,8 @@ from paho.mqtt import client as mqtt
 LOCAL_HOST = "127.0.0.1"
 LOCAL_PORT = 1883
 LOCAL_TOPIC = "gateway/#"
+# Zusätzliches Topic vom GPS-Sender (legacy)
+EXTRA_TOPIC = "gps"
 
 # AWS IoT
 AWS_ENDPOINT = "a217mym6eh7534-ats.iot.eu-central-1.amazonaws.com"
@@ -43,6 +45,7 @@ last_forward = {}  # remote_topic -> timestamp der letzten Weiterleitung
 def on_local_connect(client, userdata, flags, rc):
     print("Local connected:", rc)
     client.subscribe(LOCAL_TOPIC)
+    client.subscribe(EXTRA_TOPIC)
 
 
 def on_local_message(client, userdata, msg):
@@ -51,9 +54,11 @@ def on_local_message(client, userdata, msg):
     topic = msg.topic
     payload = msg.payload
 
-    # Topic umbiegen: gateway/... -> sensors/...
+    # Topic umbiegen: gateway/... -> sensors/...; gps -> sensors/pi9/gps
     if topic.startswith(REMOTE_PREFIX_IN):
         remote_topic = REMOTE_PREFIX_OUT + topic[len(REMOTE_PREFIX_IN):]
+    elif topic == "gps":
+        remote_topic = "sensors/pi9/gps"
     else:
         remote_topic = topic  # zur Sicherheit
 
