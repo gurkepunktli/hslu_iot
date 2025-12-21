@@ -1,23 +1,23 @@
 // ============================================
 // CLOUDFLARE WORKER - Bike Tracker API
 // ============================================
-// 
+//
 // DEPLOYMENT:
-// 1. Gehe zu Cloudflare Dashboard > Workers & Pages
+// 1. Go to Cloudflare Dashboard > Workers & Pages
 // 2. Create > Workers > "Create Worker"
-// 3. Ersetze den Code mit diesem hier
+// 3. Replace the code with this file
 // 4. Deploy
-// 5. Gehe zu Settings > Variables und füge hinzu:
-//    - AWS_ACCESS_KEY (dein AWS Access Key)
-//    - AWS_SECRET_KEY (dein AWS Secret - als "Encrypt" markieren!)
-//    - AWS_REGION (z.B. eu-central-1)
-//    - DYNAMODB_TABLE (dein Tabellenname)
-//    - ADMIN_PIN (z.B. 1234)
+// 5. Go to Settings > Variables and add:
+//    - AWS_ACCESS_KEY (your AWS Access Key)
+//    - AWS_SECRET_KEY (your AWS Secret - mark as "Encrypt"!)
+//    - AWS_REGION (e.g. eu-central-1)
+//    - DYNAMODB_TABLE (your table name)
+//    - ADMIN_PIN (e.g. 1234)
 //
 // ============================================
 
-// Fallback-Konfiguration, falls Cloudflare-Variablen nicht verfügbar sind.
-// Trage hier die Werte ein, falls sie nicht als Env-Variablen gesetzt werden können.
+// Fallback configuration if Cloudflare variables are not available.
+// Enter values here if they cannot be set as environment variables.
 const DEFAULT_REGION = 'eu-central-1';
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1446116774998179861/elv96aMUltKQtfLIkTDdmVGzzQXpM3nJAkN193eMmZ5LHFy4FqTHHXzkJxDT3TZTH5Yo';
 
@@ -97,27 +97,26 @@ export default {
                     return new Response('[]', { headers: corsHeaders });
                 }
 
-                // Liefere komplette Historie, auch ohne GPS-Fix, damit UI Offline/Nofix anzeigen kann
+                // Return complete history including entries without GPS fix
                 const points = data.Items
                     .map(parseItem);
                 return new Response(JSON.stringify(points), { headers: corsHeaders });
             }
 
-            // Route: POST /api/stolen - Diebstahl melden/aufheben
+            // Route: POST /api/stolen - Report/clear theft
             if (url.pathname === '/api/stolen' && request.method === 'POST') {
                 const body = await request.json();
                 const { stolen, pin, device = 'pi9' } = body;
 
-                // PIN prüfen
+                // Verify PIN
                 if (pin !== config.ADMIN_PIN) {
                     return new Response(
-                        JSON.stringify({ error: 'Ungültiger PIN' }),
+                        JSON.stringify({ error: 'Invalid PIN' }),
                         { status: 401, headers: corsHeaders }
                     );
                 }
 
-                // Status in separater "Status-Tabelle" oder als Attribut speichern
-                // Hier: Wir speichern in KV (einfacher)
+                // Store status in KV (simple approach)
                 await env.BIKE_STATUS?.put(`stolen:${device}`, JSON.stringify({
                     stolen: stolen,
                     timestamp: new Date().toISOString()
@@ -215,7 +214,7 @@ export default {
                 );
             }
 
-            // Route: GET /api/status - Diebstahl-Status abrufen
+            // Route: GET /api/status - Get theft status
             if (url.pathname === '/api/status' && request.method === 'GET') {
                 const device = url.searchParams.get('device') || 'pi9';
                 
@@ -256,7 +255,7 @@ export default {
                 return new Response(JSON.stringify({ job_id: jobId }), { headers: corsHeaders });
             }
 
-            // Route: POST /api/job - Job anlegen (Frontend-Button)
+            // Route: POST /api/job - Create job (Frontend button)
             if (url.pathname === '/api/job' && request.method === 'POST') {
                 if (!env.JOB_QUEUE) {
                     return new Response(
@@ -284,7 +283,7 @@ export default {
                 return new Response(JSON.stringify({ job_id: jobId }), { headers: corsHeaders });
             }
 
-            // Route: GET /api/job/poll - Gateway fragt nach Arbeit
+            // Route: GET /api/job/poll - Gateway polls for jobs
             if (url.pathname === '/api/job/poll' && request.method === 'GET') {
                 if (!env.JOB_QUEUE) {
                     return new Response(
@@ -307,7 +306,7 @@ export default {
                 }
 
                 const jobRaw = await env.JOB_QUEUE.get(`job:${nextId}`);
-                // Job einmalig zustellen
+                // Deliver job once only
                 await env.JOB_QUEUE.delete(`next:${piId}`);
 
                 return new Response(
@@ -316,7 +315,7 @@ export default {
                 );
             }
 
-            // Route: POST /api/job/result - Gateway meldet Ergebnis
+            // Route: POST /api/job/result - Gateway reports result
             if (url.pathname === '/api/job/result' && request.method === 'POST') {
                 if (!env.JOB_QUEUE) {
                     return new Response(
@@ -354,7 +353,7 @@ export default {
                 return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
             }
 
-            // Route: GET /api/job/status - Frontend fragt Status ab
+            // Route: GET /api/job/status - Frontend polls job status
             if (url.pathname === '/api/job/status' && request.method === 'GET') {
                 if (!env.JOB_QUEUE) {
                     return new Response(
@@ -378,7 +377,7 @@ export default {
                 );
             }
 
-            // 404 für unbekannte Routen
+            // 404 for unknown routes
             return new Response(
                 JSON.stringify({ error: 'Not found' }), 
                 { status: 404, headers: corsHeaders }
@@ -394,7 +393,7 @@ export default {
     }
 };
 
-// DynamoDB Query ausführen
+// Execute DynamoDB Query
 async function queryDynamoDB(config, device, limit) {
     const region = config.AWS_REGION || 'eu-central-1';
     const tableName = config.DYNAMODB_TABLE;
@@ -501,7 +500,7 @@ async function sha256(message) {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// DynamoDB Item parsen
+// Parse DynamoDB Item
 function parseItem(item) {
     try {
         const payload = item.payload?.M || item.payload || item;
@@ -548,6 +547,6 @@ function findLatestValidPosition(items) {
             return parsed;
         }
     }
-    // Fallback: kein gültiger Fix gefunden
+    // Fallback: no valid fix found
     return {};
 }

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 GPS transmitter for Pi9
-- Liest GPS von /dev/ttyS0
-- Zeigt Status auf dem OLED
-- Publisht GPS-Daten via MQTT an das Gateway (Topic gateway/pi9/gps)
-- Sendet immer einen Datensatz (mit fix=true/false), damit das UI auch bei No-Fix aktualisiert
+- Reads GPS data from /dev/ttyS0
+- Displays status on OLED
+- Publishes GPS data via MQTT to Gateway (Topic gateway/pi9/gps)
+- Always sends data (with fix=true/false) so UI updates even without GPS fix
 """
 
 import json
@@ -32,7 +32,7 @@ STATUS_CHECK_INTERVAL = 10  # seconds between API checks
 
 MQTT_HOST = "172.30.2.50"
 MQTT_PORT = 1883
-MQTT_TOPIC = "gateway/pi9/gps"  # Topic, das der Forwarder nach AWS weiterleitet
+MQTT_TOPIC = "gateway/pi9/gps"  # Topic forwarded to AWS by the forwarder
 DEVICE_ID = "pi9"
 
 # ---- Display brightness state (shared between threads) ----

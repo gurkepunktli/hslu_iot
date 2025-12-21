@@ -39,7 +39,7 @@ def dm_to_deg(dm, direction):
 def parse_rmc(line):
     parts = line.split(",")
     if len(parts) < 10:
-        print("RMC zu kurz:", parts)
+        print("RMC too short:", parts)
         return None
 
     status = parts[2]
@@ -75,13 +75,13 @@ def parse_rmc(line):
 
 
 def main():
-    print("Starte GPS Reader...")
+    print("Starting GPS Reader...")
     ser = serial.Serial(GPS_PORT, GPS_BAUD, timeout=1)
 
     client = mqtt.Client(client_id="pi9-gps")
     client.connect(GATEWAY_IP, GATEWAY_PORT, keepalive=60)
     client.loop_start()
-    print("MQTT verbunden mit", GATEWAY_IP, GATEWAY_PORT)
+    print("MQTT connected to", GATEWAY_IP, GATEWAY_PORT)
 
     while True:
         raw = ser.readline()
@@ -91,17 +91,16 @@ def main():
         try:
             line = raw.decode("ascii", errors="ignore").strip()
         except Exception as e:
-            print("Decode Fehler:", e, raw)
+            print("Decode error:", e, raw)
             continue
 
         if not line:
             continue
 
-        # alles loggen was kommt:
-        # nur fuer Debug, kannst du spaeter wieder auskommentieren
+        # Log all incoming data (for debugging, can be commented out later)
         print("NMEA:", line)
 
-        # viele Module senden $GNRMC statt $GPRMC
+        # Many modules send $GNRMC instead of $GPRMC
         if line.startswith("$G") and "RMC" in line:
             parsed = parse_rmc(line) or {}
 

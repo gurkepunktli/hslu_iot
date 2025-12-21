@@ -18,28 +18,28 @@ import requests
 from datetime import datetime
 from paho.mqtt import client as mqtt
 
-# Lokaler Broker (Gateway)
+# Local Broker (Gateway)
 LOCAL_HOST = "127.0.0.1"
 LOCAL_PORT = 1883
 LOCAL_TOPIC = "gateway/#"
-# Zusätzliche Topics von GPS und Light Pi (legacy)
+# Additional topics from GPS and Light Pi (legacy)
 GPS_TOPIC = "gps"
 LIGHT_TOPIC = "bike/light"
 
 # AWS IoT
 AWS_ENDPOINT = "a217mym6eh7534-ats.iot.eu-central-1.amazonaws.com"
 AWS_PORT = 8883
-CLIENT_ID = "iot_gateway"  # passt zu deiner Policy
+CLIENT_ID = "iot_gateway"  # Matches AWS IoT policy
 
 CA_PATH = "/etc/mosquitto/certs/root-CA.crt"
 CERT_PATH = "/etc/mosquitto/certs/iot_gateway.cert.pem"
 KEY_PATH = "/etc/mosquitto/certs/iot_gateway.private.key"
 
-# aus gateway/foo/bar soll sensors/foo/bar werden
+# Topic mapping: gateway/foo/bar -> sensors/foo/bar
 REMOTE_PREFIX_IN = "gateway/"
 REMOTE_PREFIX_OUT = "sensors/"
 
-# Sekunden zwischen zwei Weiterleitungen pro Topic
+# Seconds between forwarding per topic (rate limiting)
 MIN_INTERVAL_SEC = 10
 
 # ---- Theft Detection Config ----
@@ -47,7 +47,7 @@ THEFT_DISTANCE_THRESHOLD = 10  # meters
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1446116774998179861/elv96aMUltKQtfLIkTDdmVGzzQXpM3nJAkN193eMmZ5LHFy4FqTHHXzkJxDT3TZTH5Yo"
 
 aws_client = None
-last_forward = {}  # remote_topic -> timestamp der letzten Weiterleitung
+last_forward = {}  # remote_topic -> timestamp of last forwarded message
 
 # ---- Theft Detection State ----
 last_locked_position = None  # (lat, lon) when lockmode activated
@@ -181,7 +181,7 @@ def on_local_message(client, userdata, msg):
         except:
             pass  # Ignore parsing errors, continue with forwarding
 
-    # Topic umbiegen:
+    # Topic remapping:
     # - gateway/... -> sensors/...
     # - gps -> sensors/pi9/gps
     # - bike/light -> sensors/light/brightness
@@ -192,14 +192,14 @@ def on_local_message(client, userdata, msg):
     elif topic == "bike/light":
         remote_topic = "sensors/light/brightness"
     else:
-        remote_topic = topic  # zur Sicherheit
+        remote_topic = topic  # Fallback safety
 
     now = time.time()
     last_ts = last_forward.get(remote_topic, 0)
 
-    # nur alle 10 s pro Topic weiterleiten
+    # Only forward every 10 seconds per topic (rate limiting)
     if now - last_ts < MIN_INTERVAL_SEC:
-        # Debug optional
+        # Optional debug output
         # print(f"Skipping {remote_topic}, last {now - last_ts:.1f}s ago")
         return
 
